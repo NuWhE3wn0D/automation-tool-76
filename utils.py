@@ -1,30 +1,24 @@
-def read_file(file_path):
+import json
+
+def load_json(file_path):
     with open(file_path, 'r') as file:
-        return file.read()
+        return json.load(file)
 
 
-def write_file(file_path, content):
+def save_json(data, file_path):
     with open(file_path, 'w') as file:
-        file.write(content)
+        json.dump(data, file, indent=4)
 
 
-def append_to_file(file_path, content):
-    with open(file_path, 'a') as file:
-        file.write(content)
+def merge_dictionaries(a, b):
+    result = a.copy()
+    result.update(b)
+    return result
 
 
-def list_files(directory):
-    import os
-    return [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
+def filter_dict(data, keys):
+    return {key: data[key] for key in keys if key in data}
 
 
-def create_directory(directory):
-    import os
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-
-
-def delete_file(file_path):
-    import os
-    if os.path.isfile(file_path):
-        os.remove(file_path)
+def flatten_list(nested_list):
+    return [item for sublist in nested_list for item in sublist]
