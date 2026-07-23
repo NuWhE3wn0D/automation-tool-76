@@ -1,38 +1,17 @@
-import os
-import json
+import time
+import requests
 
+class RetryException(Exception):
+    pass
 
-def read_json_file(file_path):
-    if not os.path.isfile(file_path):
-        raise FileNotFoundError(f'File not found: {file_path}')  
-    if not file_path.endswith('.json'):
-        raise ValueError('File must be a JSON file')
-    
-    with open(file_path, 'r') as file:
+def retry_request(url, retries=3, delay=2):
+    for attempt in range(retries):
         try:
-            return json.load(file)
-        except json.JSONDecodeError:
-            raise ValueError('Error decoding JSON from the file')
-
-
-def write_json_file(file_path, data):
-    if not file_path.endswith('.json'):
-        raise ValueError('File must be a JSON file')
-    
-    with open(file_path, 'w') as file:
-        json.dump(data, file, indent=4)  
-
-
-def safe_divide(numerator, denominator):
-    if denominator == 0:
-        raise ZeroDivisionError('Denominator cannot be zero')
-    return numerator / denominator
-
-
-def validate_string(value):
-    if not isinstance(value, str):
-        raise TypeError('Value must be a string')
-    if not value:
-        raise ValueError('String cannot be empty')
-
-    return True
+            response = requests.get(url)
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException:
+            if attempt < retries - 1:
+                time.sleep(delay)
+            else:
+                raise RetryException(f'Failed to fetch data after {retries} attempts')
