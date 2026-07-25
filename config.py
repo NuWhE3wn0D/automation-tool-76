@@ -1,37 +1,22 @@
-import os
 import json
+import os
 
-class ConfigError(Exception):
-    pass
+class ConfigLoader:
+    def __init__(self, default_config_path, user_config_path):
+        self.default_config = self.load_config(default_config_path)
+        self.user_config = self.load_config(user_config_path)
 
-class Config:
-    def __init__(self, config_file):
-        self.config_file = config_file
-        self.config_data = self.load_config()
+    def load_config(self, path):
+        if os.path.exists(path):
+            with open(path, 'r') as f:
+                return json.load(f)
+        return {}
 
-    def load_config(self):
-        if not os.path.isfile(self.config_file):
-            raise ConfigError(f"Config file not found: {self.config_file}")
-        with open(self.config_file, 'r') as file:
-            try:
-                return json.load(file)
-            except json.JSONDecodeError:
-                raise ConfigError('Invalid JSON format in config file.')
+    def get_config(self):
+        config = self.default_config.copy()
+        config.update(self.user_config)
+        return config
 
-    def get(self, key, default=None):
-        try:
-            return self.config_data[key]
-        except KeyError:
-            return default
-
-    def set(self, key, value):
-        self.config_data[key] = value
-        self.save_config()
-
-    def save_config(self):
-        with open(self.config_file, 'w') as file:
-            json.dump(self.config_data, file, indent=4)
-
-# Example usage:
-# config = Config('config.json')
-# print(config.get('some_key', default='default_value'))
+if __name__ == '__main__':
+    loader = ConfigLoader('defaults.json', 'user_config.json')
+    print(loader.get_config())
