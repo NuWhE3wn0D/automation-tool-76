@@ -1,30 +1,26 @@
-def read_file(file_path):
-    with open(file_path, 'r') as file:
-        return file.read()
+import time
+import requests
 
+class NetworkError(Exception):
+    pass
 
-def write_file(file_path, content):
-    with open(file_path, 'w') as file:
-        file.write(content)
+def retry_on_failure(max_retries=3, delay=1):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            attempts = 0
+            while attempts < max_retries:
+                try:
+                    return func(*args, **kwargs)
+                except (requests.RequestException, NetworkError) as e:
+                    attempts += 1
+                    if attempts == max_retries:
+                        raise NetworkError('Max retries exceeded')
+                    time.sleep(delay)
+        return wrapper
+    return decorator
 
-
-def append_to_file(file_path, content):
-    with open(file_path, 'a') as file:
-        file.write(content)
-
-
-def delete_file(file_path):
-    import os
-    if os.path.exists(file_path):
-        os.remove(file_path)
-
-
-def list_files(directory):
-    import os
-    return [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
-
-
-def create_directory(directory):
-    import os
-    if not os.path.exists(directory):
-        os.makedirs(directory)
+@retry_on_failure(max_retries=5, delay=2)
+def fetch_data(url):
+    response = requests.get(url)
+    response.raise_for_status()
+    return response.json()
