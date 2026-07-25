@@ -1,31 +1,44 @@
-import json
-
-def load_json(file_path):
-    with open(file_path, 'r') as file:
-        return json.load(file)
+from typing import Any, Dict, List
 
 
-def save_json(file_path, data):
-    with open(file_path, 'w') as file:
-        json.dump(data, file, indent=4)
+def merge_dicts(dict1: Dict[str, Any], dict2: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Merges two dictionaries, with values from dict2 overwriting those in dict1.
+
+    Args:
+        dict1 (Dict[str, Any]): The first dictionary.
+        dict2 (Dict[str, Any]): The second dictionary.
+
+    Returns:
+        Dict[str, Any]: The merged dictionary.
+    """
+    merged = dict1.copy()
+    merged.update(dict2)
+    return merged
 
 
-def merge_dicts(dict1, dict2):
-    result = dict1.copy()
-    result.update(dict2)
-    return result
+def flatten_list(nested_list: List[List[Any]]) -> List[Any]:
+    """
+    Flattens a nested list into a single list.
+
+    Args:
+        nested_list (List[List[Any]]): The nested list to flatten.
+
+    Returns:
+        List[Any]: A flat list containing all elements.
+    """
+    return [item for sublist in nested_list for item in sublist]
 
 
-def flatten_list(nested_list):
-    return [item for sublist in nested_list for item in sublist]  
+def check_key_exists(dictionary: Dict[str, Any], key: str) -> bool:
+    """
+    Checks if a key exists in the given dictionary.
 
+    Args:
+        dictionary (Dict[str, Any]): The dictionary to check.
+        key (str): The key to check for.
 
-def find_key_in_dict(target_dict, target_key):
-    if target_key in target_dict:
-        return target_dict[target_key]
-    for key, value in target_dict.items():
-        if isinstance(value, dict):
-            found = find_key_in_dict(value, target_key)
-            if found:
-                return found
-    return None
+    Returns:
+        bool: True if the key exists, else False.
+    """
+    return key in dictionary
