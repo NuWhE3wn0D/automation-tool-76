@@ -1,32 +1,28 @@
-import time
-import requests
+import json
 
-class NetworkError(Exception):
+class InputValidationError(Exception):
     pass
 
-def retry_on_failure(retries=3, delay=1):
-    def decorator(func):
-        def wrapper(*args, **kwargs):
-            for attempt in range(retries):
-                try:
-                    return func(*args, **kwargs)
-                except (requests.exceptions.RequestException, NetworkError) as e:
-                    if attempt < retries - 1:
-                        time.sleep(delay)
-                    else:
-                        raise NetworkError(f'Failed after {retries} attempts') from e
-        return wrapper
-    return decorator
+def validate_input(data):
+    if not isinstance(data, dict):
+        raise InputValidationError('Input must be a dictionary')
+    required_keys = ['name', 'age']
+    for key in required_keys:
+        if key not in data:
+            raise InputValidationError(f'Missing required key: {key}')
+    if not isinstance(data['name'], str) or not isinstance(data['age'], int):
+        raise InputValidationError('Invalid data types for name or age')
 
-@retry_on_failure(retries=5, delay=2)
-def fetch_data(url):
-    response = requests.get(url)
-    response.raise_for_status()
-    return response.json()
+def main_processing_loop(input_data):
+    try:
+        validate_input(input_data)
+        # Process the valid input data
+        print(f'Processing: {input_data}')
+    except InputValidationError as e:
+        print(f'Input validation error: {e}')
 
 if __name__ == '__main__':
-    try:
-        data = fetch_data('https://api.example.com/data')
-        print(data)
-    except NetworkError as e:
-        print(e)
+    test_data = {'name': 'John Doe', 'age': 30}
+    main_processing_loop(test_data)
+    invalid_data = {'name': 123, 'age': 'thirty'}
+    main_processing_loop(invalid_data)
