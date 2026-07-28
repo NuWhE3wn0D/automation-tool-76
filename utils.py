@@ -1,17 +1,30 @@
-import time
-import requests
+import json
 
-class RetryException(Exception):
-    pass
 
-def retry_request(url, retries=3, backoff_factor=0.3):
-    for i in range(retries):
-        try:
-            response = requests.get(url)
-            response.raise_for_status()
-            return response
-        except requests.exceptions.RequestException as e:
-            if i == retries - 1:
-                raise RetryException(f'Failed after {retries} attempts') from e
-            time.sleep(backoff_factor * (2 ** i))
+def load_json(file_path):
+    with open(file_path, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+
+def save_json(data, file_path):
+    with open(file_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
+
+def merge_dicts(dict1, dict2):
+    result = dict1.copy()
+    result.update(dict2)
+    return result
+
+
+def filter_dict(data, keys):
+    return {key: data[key] for key in keys if key in data}
+
+
+def validate_json_schema(data, schema):
+    from jsonschema import validate, ValidationError
+    try:
+        validate(instance=data, schema=schema)
+    except ValidationError as e:
+        return str(e)
     return None
