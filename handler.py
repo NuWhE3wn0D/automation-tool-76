@@ -1,28 +1,29 @@
-import json
+from typing import Any
 
-class InputValidationError(Exception):
-    pass
+def process_event(event: dict[str, Any]) -> None:
+    """Process an incoming event."""
+    event_type = event.get('type')
+    if event_type:
+        handle_event(event_type, event)
 
-def validate_input(data):
-    if not isinstance(data, dict):
-        raise InputValidationError('Input must be a dictionary')
-    required_keys = ['name', 'age']
-    for key in required_keys:
-        if key not in data:
-            raise InputValidationError(f'Missing required key: {key}')
-    if not isinstance(data['name'], str) or not isinstance(data['age'], int):
-        raise InputValidationError('Invalid data types for name or age')
 
-def main_processing_loop(input_data):
-    try:
-        validate_input(input_data)
-        # Process the valid input data
-        print(f'Processing: {input_data}')
-    except InputValidationError as e:
-        print(f'Input validation error: {e}')
+def handle_event(event_type: str, event: dict[str, Any]) -> None:
+    """Handle a specific event type."""
+    if event_type == 'USER_LOGIN':
+        user_login(event)
+    elif event_type == 'USER_LOGOUT':
+        user_logout(event)
+    else:
+        print(f'Unknown event type: {event_type}')
 
-if __name__ == '__main__':
-    test_data = {'name': 'John Doe', 'age': 30}
-    main_processing_loop(test_data)
-    invalid_data = {'name': 123, 'age': 'thirty'}
-    main_processing_loop(invalid_data)
+
+def user_login(event: dict[str, Any]) -> None:
+    """Handle user login events."""
+    user_id = event.get('user_id')
+    print(f'User {user_id} has logged in.')
+
+
+def user_logout(event: dict[str, Any]) -> None:
+    """Handle user logout events."""
+    user_id = event.get('user_id')
+    print(f'User {user_id} has logged out.')
