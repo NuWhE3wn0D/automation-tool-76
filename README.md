@@ -1,43 +1,56 @@
-# Automation Tool 76
+# automation-tool-76
 
-Automation Tool 76 is a versatile Python-based utility designed to streamline repetitive tasks within your workflow. From file management to data processing, this tool simplifies complex operations with ease and efficiency.
+Automation-tool-76 is a versatile Python-based automation framework designed to streamline repetitive tasks and improve efficiency in workflows. This tool empowers developers and system administrators to automate various processes with ease and flexibility.
 
 ## Features
 
-- **File Management**: Effortlessly move, copy, and delete files based on specific criteria such as file type or age.
-- **Data Processing**: Automate the extraction, transformation, and loading (ETL) of data to and from various formats including CSV, JSON, and XML.
-- **Scheduling Tasks**: Integrate cron-like scheduling to run your automation scripts at specified intervals without manual intervention.
-- **Log Management**: Generate detailed logs of executed tasks, making troubleshooting and auditing seamless.
+- **Task Scheduling**: Set up and manage automated tasks to run at specified intervals using a simple cron-like syntax.
+- **Scripting Capabilities**: Write custom scripts in Python to handle a variety of automation needs, from file management to API interactions.
+- **Modular Design**: Easily extend the tool’s functionality by adding modules for different tasks, promoting code reusability and organization.
+- **Comprehensive Logging**: Track the execution of tasks and keep detailed logs for troubleshooting and auditing purposes.
 
 ## Installation
 
-To get started with Automation Tool 76, clone the repository and install the necessary dependencies:
+To install automation-tool-76, follow these steps:
 
-```bash
-git clone https://github.com/Developer/automation-tool-76.git
-cd automation-tool-76
-pip install -r requirements.txt
-```
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/Developer/automation-tool-76.git
+   ```
+2. Navigate into the project directory:
+   ```bash
+   cd automation-tool-76
+   ```
+3. Install the required packages:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-## Basic Usage
+## Basic Usage Example
 
-Once installed, you can start automating tasks with a simple command. Here’s a basic example of copying all `.txt` files from one directory to another:
+To get started with automation-tool-76, create a new Python script that utilizes the provided framework. Here is a simple example:
 
 ```python
-from automation_tool import FileManager
+from automation_tool import Scheduler
 
-file_manager = FileManager(source_directory='source/folder', destination_directory='destination/folder')
-file_manager.copy_files(file_extension='.txt')
+# Create a new scheduler instance
+scheduler = Scheduler()
+
+# Define a task to run every minute
+def hello_world_task():
+    print("Hello, World!")
+
+# Schedule the task
+scheduler.every(1).minutes.do(hello_world_task)
+
+# Start the scheduler
+scheduler.start()
 ```
 
-In this example, the `FileManager` class automates the task of copying all text files from the source folder to the destination folder.
+This example demonstrates how to schedule a task that prints "Hello, World!" every minute. 
 
 ## License
 
-![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg) 
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-For detailed information on advanced features and usage, please refer to the documentation located in the `docs` directory. Your feedback and contributions are welcome!
