@@ -1,24 +1,26 @@
-from typing import List, Dict
+import time
 
+class DataProcessor:
+    def __init__(self, data):
+        self.data = data
 
-def process_data(data: List[Dict[str, int]]) -> List[Dict[str, int]]:
-    """Process a list of dictionaries to double each value.
+    def process(self):
+        start_time = time.time()
+        processed_data = self._optimize_processing(self.data)
+        elapsed_time = time.time() - start_time
+        print(f"Processing time: {elapsed_time:.4f} seconds")
+        return processed_data
 
-    Args:
-        data (List[Dict[str, int]]): A list of dictionaries with integer values.
+    def _optimize_processing(self, data):
+        result = []
+        for item in data:
+            result.append(self._transform(item))
+        return result
 
-    Returns:
-        List[Dict[str, int]]: A new list with each value doubled.
-    """
-    return [{k: v * 2 for k, v in item.items()} for item in data]
+    def _transform(self, item):
+        return item ** 2  # Example transformation: squaring the item
 
-
-def log_processed_data(data: List[Dict[str, int]], logger) -> None:
-    """Log each processed data entry.
-
-    Args:
-        data (List[Dict[str, int]]): A list of processed dictionaries.
-        logger: Logger instance to log data.
-    """
-    for item in data:
-        logger.info(item)
+# Example usage:
+# if __name__ == '__main__':
+#     processor = DataProcessor(range(10))
+#     processed = processor.process()  # This would execute the process method
