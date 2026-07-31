@@ -1,20 +1,26 @@
+import json
 import os
 
-class Config:
-    def __init__(self):
-        self.env = self.load_env()
-        self.db_uri = self.get_db_uri()
-        self.api_key = self.get_api_key()
+class ConfigLoader:
+    def __init__(self, default_config):
+        self.default_config = default_config
+        self.config = default_config.copy()
 
-    def load_env(self):
-        return os.getenv('ENV', 'development')
+    def load(self, filepath):
+        if os.path.exists(filepath):
+            with open(filepath, 'r') as file:
+                file_config = json.load(file)
+                self.config.update(file_config)
 
-    def get_db_uri(self):
-        if self.env == 'production':
-            return os.getenv('PROD_DB_URI')
-        return os.getenv('DEV_DB_URI')
+    def get(self, key, default=None):
+        return self.config.get(key, default)
 
-    def get_api_key(self):
-        return os.getenv('API_KEY')
-
-config = Config()
+if __name__ == '__main__':
+    defaults = {
+        'setting1': 'default_value1',
+        'setting2': 'default_value2',
+    }
+    config_loader = ConfigLoader(defaults)
+    config_loader.load('config.json')
+    print(config_loader.get('setting1'))  # Outputs the value of setting1
+    print(config_loader.get('setting2'))  # Outputs the value of setting2
