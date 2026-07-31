@@ -1,19 +1,30 @@
-import json
+import time
+import requests
+from requests.exceptions import RequestException
 
-class RequestHandler:
-    def __init__(self, data):
-        self.data = data
+def retry_on_exception(max_retries=3, delay=2):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except RequestException:
+                    if attempt < max_retries - 1:
+                        time.sleep(delay)
+                    else:
+                        raise
+        return wrapper
+    return decorator
 
-    def validate_request(self):
-        if not isinstance(self.data, dict):
-            raise ValueError('Invalid request data')
-        return True
-
-    def process_request(self):
-        self.validate_request()
-        return json.dumps(self.data)
+@retry_on_exception(max_retries=5, delay=1)
+def fetch_data(url):
+    response = requests.get(url)
+    response.raise_for_status()
+    return response.json()
 
 if __name__ == '__main__':
-    data = {'key': 'value'}
-    handler = RequestHandler(data)
-    print(handler.process_request())
+    try:
+        data = fetch_data('https://api.example.com/data')
+        print(data)
+    except RequestException as e:
+        print(f'Network error: {e}')
