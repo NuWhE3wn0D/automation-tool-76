@@ -1,25 +1,20 @@
-import json
 import os
 
-class ConfigLoader:
-    def __init__(self, defaults=None, config_file='config.json'):
-        self.defaults = defaults or {}
-        self.config_file = config_file
-        self.config = self.load_config()
+class Config:
+    def __init__(self):
+        self.env = self.load_env()
+        self.db_uri = self.get_db_uri()
+        self.api_key = self.get_api_key()
 
-    def load_config(self):
-        if os.path.exists(self.config_file):
-            with open(self.config_file, 'r') as f:
-                return {**self.defaults, **json.load(f)}
-        return self.defaults
+    def load_env(self):
+        return os.getenv('ENV', 'development')
 
-    def get(self, key, default=None):
-        return self.config.get(key, default)
+    def get_db_uri(self):
+        if self.env == 'production':
+            return os.getenv('PROD_DB_URI')
+        return os.getenv('DEV_DB_URI')
 
-    def set(self, key, value):
-        self.config[key] = value
-        self.save_config()
+    def get_api_key(self):
+        return os.getenv('API_KEY')
 
-    def save_config(self):
-        with open(self.config_file, 'w') as f:
-            json.dump(self.config, f, indent=4)
+config = Config()
