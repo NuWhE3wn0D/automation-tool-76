@@ -1,19 +1,19 @@
 class CustomError(Exception):
-    pass
-
-class NotFoundError(CustomError):
-    def __init__(self, message="Not Found"): 
+    def __init__(self, message):
         super().__init__(message)
+        self.message = message
 
 class ValidationError(CustomError):
-    def __init__(self, field, message="Invalid value"): 
-        self.field = field
-        super().__init__(f"{field}: {message}")
+    pass
 
-class AuthError(CustomError):
-    def __init__(self, message="Authentication failed"): 
-        super().__init__(message)
+class ProcessingError(CustomError):
+    pass
 
-class PermissionError(CustomError):
-    def __init__(self, message="Permission denied"): 
-        super().__init__(message)
+class ConfigurationError(CustomError):
+    pass
+
+class FileNotFoundError(CustomError):
+    pass
+
+class TimeoutError(CustomError):
+    pass
