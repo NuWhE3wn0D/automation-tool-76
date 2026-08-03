@@ -1,26 +1,35 @@
-import json
 import os
+import json
 
-class ConfigLoader:
-    def __init__(self, default_config):
-        self.default_config = default_config
-        self.config = default_config.copy()
+class ConfigError(Exception):
+    pass
 
-    def load(self, filepath):
-        if os.path.exists(filepath):
-            with open(filepath, 'r') as file:
-                file_config = json.load(file)
-                self.config.update(file_config)
+class Config:
+    def __init__(self, config_file):
+        self.config_file = config_file
+        self.config_data = self.load_config()
+
+    def load_config(self):
+        if not os.path.exists(self.config_file):
+            raise ConfigError(f'Config file not found: {self.config_file}')
+        try:
+            with open(self.config_file, 'r') as f:
+                return json.load(f)
+        except json.JSONDecodeError:
+            raise ConfigError('Error decoding JSON from config file')
+        except Exception as e:
+            raise ConfigError(f'Unexpected error occurred: {str(e)}')
 
     def get(self, key, default=None):
-        return self.config.get(key, default)
+        return self.config_data.get(key, default)
 
-if __name__ == '__main__':
-    defaults = {
-        'setting1': 'default_value1',
-        'setting2': 'default_value2',
-    }
-    config_loader = ConfigLoader(defaults)
-    config_loader.load('config.json')
-    print(config_loader.get('setting1'))  # Outputs the value of setting1
-    print(config_loader.get('setting2'))  # Outputs the value of setting2
+    def set(self, key, value):
+        self.config_data[key] = value
+        self.save_config()
+
+    def save_config(self):
+        try:
+            with open(self.config_file, 'w') as f:
+                json.dump(self.config_data, f, indent=4)
+        except Exception as e:
+            raise ConfigError(f'Error saving config file: {str(e)}')
