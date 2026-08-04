@@ -1,20 +1,18 @@
-VERSION = '1.0.0'
+import json
+import os
+
 DEFAULT_CONFIG = {
-    'timeout': 30,
-    'max_retries': 5,
-    'base_url': 'https://api.example.com',
-    'log_level': 'INFO',
+    'setting1': 'value1',
+    'setting2': 10,
+    'setting3': True,
 }
-HTTP_STATUS_CODES = {
-    200: 'OK',
-    400: 'Bad Request',
-    404: 'Not Found',
-    500: 'Internal Server Error',
-}
-ERROR_MESSAGES = {
-    'network_error': 'Network connectivity issue.',
-    'timeout_error': 'Operation timed out.',
-    'response_error': 'Invalid response from server.',
-}
-SUPPORTED_FILE_TYPES = ['csv', 'json', 'xml']
-MAX_FILE_SIZE_MB = 10
+
+def load_config(file_path='config.json'):
+    if os.path.isfile(file_path):
+        with open(file_path, 'r') as config_file:
+            try:
+                config = json.load(config_file)
+                return {**DEFAULT_CONFIG, **config}
+            except json.JSONDecodeError:
+                return DEFAULT_CONFIG
+    return DEFAULT_CONFIG
