@@ -1,27 +1,26 @@
-import time
+def optimized_sort(data):
+    if not data:
+        return data
+    return sorted(data, key=lambda x: (x is None, x))
 
-def timeit(func):
-    def wrapper(*args, **kwargs):
-        start = time.time()
-        result = func(*args, **kwargs)
-        end = time.time()
-        print(f'Execution time of {func.__name__}: {end - start:.4f} seconds')
-        return result
-    return wrapper
+class DataProcessor:
+    def __init__(self, data):
+        self.data = data
 
-@timeit
-def compute_heavy_task(data):
-    result = 0
-    for i in range(len(data)):
-        result += data[i] ** 2
-    return result
+    def filter_none(self):
+        self.data = [x for x in self.data if x is not None]
 
-@timeit
-def process_data(data):
-    return [x * 2 for x in data if x > 0]
+    def process(self):
+        self.filter_none()
+        return optimized_sort(self.data)
 
-# Example usage
+def batch_process(data_batches):
+    results = []
+    for batch in data_batches:
+        processor = DataProcessor(batch)
+        results.append(processor.process())
+    return results
+
 if __name__ == '__main__':
-    input_data = range(10000)
-    squared_result = compute_heavy_task(input_data)
-    processed_result = process_data(input_data)
+    sample_data = [[3, None, 2], [1, 4, None]]
+    print(batch_process(sample_data))
