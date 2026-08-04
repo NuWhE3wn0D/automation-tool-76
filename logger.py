@@ -1,13 +1,27 @@
 import logging
-from logging.handlers import RotatingFileHandler
 
-def setup_logger(log_file, max_size=1 * 1024 * 1024, backup_count=5):
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-    handler = RotatingFileHandler(log_file, maxBytes=max_size, backupCount=backup_count)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
+class Logger:
+    def __init__(self, name):
+        self.logger = logging.getLogger(name)
 
-    logger.addHandler(handler)
-    return logger
+    def debug(self, message):
+        self.logger.debug(message)
+
+    def info(self, message):
+        self.logger.info(message)
+
+    def warning(self, message):
+        self.logger.warning(message)
+
+    def error(self, message):
+        self.logger.error(message)
+
+    def critical(self, message):
+        self.logger.critical(message)
+
+logger = Logger(__name__)
+
+if __name__ == '__main__':
+    logger.info('Logger initialized successfully.')
