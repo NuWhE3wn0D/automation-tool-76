@@ -1,33 +1,23 @@
 import json
-import logging
+from typing import Any, Dict, List
 
-class ProcessingError(Exception):
-    pass
+def load_json(file_path: str) -> Dict[str, Any]:
+    with open(file_path, 'r') as file:
+        return json.load(file)
 
-class DataProcessor:
-    def __init__(self, data):
-        if not isinstance(data, list):
-            raise ProcessingError('Data should be a list')
-        self.data = data
 
-    def process_data(self):
-        try:
-            return [self._process_item(item) for item in self.data]
-        except Exception as e:
-            logging.error(f'Error processing data: {e}')
-            raise ProcessingError('Data processing failed')
+def save_json(file_path: str, data: Dict[str, Any]) -> None:
+    with open(file_path, 'w') as file:
+        json.dump(data, file, indent=4)
 
-    def _process_item(self, item):
-        if not isinstance(item, dict):
-            raise ProcessingError('Each item must be a dictionary')
-        return {k: v for k, v in item.items() if v is not None}
 
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
-    sample_data = [{'key1': 'value1', 'key2': None}, {'key1': None, 'key2': 'value2'}, 'invalid']
-    try:
-        processor = DataProcessor(sample_data)
-        result = processor.process_data()
-        print(json.dumps(result))
-    except ProcessingError as e:
-        logging.error(f'Processing error: {e}')
+def filter_data(data: List[Dict[str, Any]], condition: Dict[str, Any]) -> List[Dict[str, Any]]:
+    return [item for item in data if all(item.get(k) == v for k, v in condition.items())]
+
+
+def merge_data(data1: List[Dict[str, Any]], data2: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    return data1 + [item for item in data2 if item not in data1]
+
+
+def pretty_print(data: Any) -> None:
+    print(json.dumps(data, indent=4))
