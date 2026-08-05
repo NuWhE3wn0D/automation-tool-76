@@ -1,27 +1,13 @@
 import logging
+from logging.handlers import RotatingFileHandler
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+LOG_LEVEL = logging.INFO
+LOG_FILE = 'app.log'
 
-class Logger:
-    def __init__(self, name):
-        self.logger = logging.getLogger(name)
+handler = RotatingFileHandler(LOG_FILE, maxBytes=5 * 1024 * 1024, backupCount=2)
+handler.setFormatter(logging.Formatter(LOG_FORMAT))
 
-    def debug(self, message):
-        self.logger.debug(message)
-
-    def info(self, message):
-        self.logger.info(message)
-
-    def warning(self, message):
-        self.logger.warning(message)
-
-    def error(self, message):
-        self.logger.error(message)
-
-    def critical(self, message):
-        self.logger.critical(message)
-
-logger = Logger(__name__)
-
-if __name__ == '__main__':
-    logger.info('Logger initialized successfully.')
+logger = logging.getLogger('AutomationTool76')
+logger.setLevel(LOG_LEVEL)
+logger.addHandler(handler)
