@@ -1,30 +1,30 @@
-import json
+import time
+import requests
+from functools import wraps
 
 
-def load_json(file_path):
-    with open(file_path, 'r', encoding='utf-8') as f:
-        return json.load(f)
+def retry(max_attempts=3, delay=2, backoff=2):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            attempts = 0
+            while attempts < max_attempts:
+                try:
+                    return func(*args, **kwargs)
+                except requests.exceptions.RequestException:
+                    attempts += 1
+                    if attempts < max_attempts:
+                        time.sleep(delay)
+                        delay *= backoff
+                    else:
+                        raise
+        return wrapper
+    return decorator
 
 
-def save_json(data, file_path):
-    with open(file_path, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
+@retry(max_attempts=5, delay=1)
+def fetch_data(url):
+    response = requests.get(url)
+    response.raise_for_status()
+    return response.json()
 
-
-def merge_dicts(dict1, dict2):
-    result = dict1.copy()
-    result.update(dict2)
-    return result
-
-
-def filter_dict(data, keys):
-    return {key: data[key] for key in keys if key in data}
-
-
-def validate_json_schema(data, schema):
-    from jsonschema import validate, ValidationError
-    try:
-        validate(instance=data, schema=schema)
-    except ValidationError as e:
-        return str(e)
-    return None
