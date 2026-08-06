@@ -1,36 +1,41 @@
-import time
+from typing import List, Dict
 
-class PerformanceOptimizer:
-    def __init__(self):
-        self.execution_times = []
 
-    def track_time(self, func):
-        def wrapper(*args, **kwargs):
-            start_time = time.time()
-            result = func(*args, **kwargs)
-            execution_time = time.time() - start_time
-            self.execution_times.append(execution_time)
-            return result
-        return wrapper
+def process_data(data: List[Dict[str, str]]) -> List[str]:
+    """
+    Process a list of dictionaries and extract values.
 
-    def average_time(self):
-        return sum(self.execution_times) / len(self.execution_times) if self.execution_times else 0
+    Args:
+        data (List[Dict[str, str]]): A list of dictionaries containing string key-value pairs.
 
-optimizer = PerformanceOptimizer()
+    Returns:
+        List[str]: A list of processed string values.
+    """
+    return [item['value'] for item in data if 'value' in item]
 
-@optimizer.track_time
-def some_heavy_computation(x):
-    total = 0
-    for i in range(x):
-        total += i ** 2
-    return total
 
-@optimizer.track_time
-def another_heavy_task(y):
-    time.sleep(1)
-    return y * 2
+def calculate_average(values: List[float]) -> float:
+    """
+    Calculate the average of a list of float values.
 
-if __name__ == '__main__':
-    some_heavy_computation(10000)
-    another_heavy_task(5)
-    print('Average execution time:', optimizer.average_time())
+    Args:
+        values (List[float]): A list of float values.
+
+    Returns:
+        float: The average value, or 0 if the list is empty.
+    """
+    return sum(values) / len(values) if values else 0.0
+
+
+def filter_valid_data(data: List[Dict[str, str]], key: str) -> List[Dict[str, str]]:
+    """
+    Filter out dictionaries that do not contain the specified key.
+
+    Args:
+        data (List[Dict[str, str]]): The list of dictionaries to filter.
+        key (str): The key to check for in each dictionary.
+
+    Returns:
+        List[Dict[str, str]]: A list of filtered dictionaries.
+    """
+    return [item for item in data if key in item]
