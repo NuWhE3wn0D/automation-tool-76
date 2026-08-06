@@ -1,7 +1,7 @@
 class CustomError(Exception):
     def __init__(self, message):
-        super().__init__(message)
         self.message = message
+        super().__init__(self.message)
 
 class ValidationError(CustomError):
     pass
@@ -12,8 +12,19 @@ class ProcessingError(CustomError):
 class ConfigurationError(CustomError):
     pass
 
-class FileNotFoundError(CustomError):
+class NotFoundError(CustomError):
     pass
 
-class TimeoutError(CustomError):
+class PermissionError(CustomError):
     pass
+
+class NetworkError(CustomError):
+    pass
+
+class TimeoutError(NetworkError):
+    pass
+
+class FileNotFoundError(Exception):
+    def __init__(self, filepath):
+        self.filepath = filepath
+        super().__init__(f'File not found: {self.filepath}')
