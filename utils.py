@@ -1,23 +1,17 @@
 import time
 import requests
 
+class RetryException(Exception):
+    pass
 
-def retry_on_exception(max_retries, delay):
-    def decorator(func):
-        def wrapper(*args, **kwargs):
-            retries = 0
-            while retries < max_retries:
-                try:
-                    return func(*args, **kwargs)
-                except (requests.ConnectionError, requests.Timeout) as e:
-                    retries += 1
-                    time.sleep(delay)
-            raise e
-        return wrapper
-    return decorator
-
-@retry_on_exception(max_retries=3, delay=2)
-def fetch_data(url):
-    response = requests.get(url)
-    response.raise_for_status()
-    return response.json()
+def retry_request(url, max_retries=3, backoff_factor=0.3):
+    for attempt in range(max_retries):
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            return response
+        except requests.RequestException:
+            if attempt < max_retries - 1:
+                time.sleep(backoff_factor * (2 ** attempt))
+            else:
+                raise RetryException(f'Failed to retrieve {url} after {max_retries} attempts')
