@@ -1,30 +1,20 @@
 class CustomError(Exception):
-    def __init__(self, message):
-        self.message = message
-        super().__init__(self.message)
+    pass
 
 class ValidationError(CustomError):
-    pass
+    def __init__(self, message):
+        super().__init__(message)
 
-class ProcessingError(CustomError):
-    pass
+class ConnectionError(CustomError):
+    def __init__(self, message):
+        super().__init__(message)
 
-class ConfigurationError(CustomError):
-    pass
+class FileNotFoundError(CustomError):
+    def __init__(self, filename):
+        message = f'File {filename} not found'
+        super().__init__(message)
 
-class NotFoundError(CustomError):
-    pass
-
-class PermissionError(CustomError):
-    pass
-
-class NetworkError(CustomError):
-    pass
-
-class TimeoutError(NetworkError):
-    pass
-
-class FileNotFoundError(Exception):
-    def __init__(self, filepath):
-        self.filepath = filepath
-        super().__init__(f'File not found: {self.filepath}')
+class PermissionDeniedError(CustomError):
+    def __init__(self, filename):
+        message = f'Permission denied for {filename}'
+        super().__init__(message)
