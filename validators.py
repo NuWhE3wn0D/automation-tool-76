@@ -1,17 +1,10 @@
-import re
+def validate_input(data):
+    if not isinstance(data, dict):
+        raise ValueError('Input must be a dictionary')
+    required_keys = ['name', 'value']
+    for key in required_keys:
+        if key not in data:
+            raise ValueError(f'Missing required key: {key}')
+    if not isinstance(data['name'], str) or not isinstance(data['value'], (int, float)):
+        raise ValueError('Invalid types for name or value')
 
-def is_valid_email(email: str) -> bool:
-    regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-    return re.match(regex, email) is not None
-
-def is_valid_phone(phone: str) -> bool:
-    regex = r'^\+?[1-9]\d{1,14}$'
-    return re.match(regex, phone) is not None
-
-def is_non_empty_string(value: str) -> bool:
-    return isinstance(value, str) and bool(value.strip())
-
-def validate_user_data(email: str, phone: str, username: str) -> bool:
-    return (is_valid_email(email) and
-            is_valid_phone(phone) and
-            is_non_empty_string(username))
