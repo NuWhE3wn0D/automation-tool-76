@@ -1,41 +1,32 @@
-from typing import List, Dict
+import time
 
+class Performance:
+    def __init__(self):
+        self.start_time = None
 
-def process_data(data: List[Dict[str, str]]) -> List[str]:
-    """
-    Process a list of dictionaries and extract values.
+    def start(self):
+        self.start_time = time.time()
 
-    Args:
-        data (List[Dict[str, str]]): A list of dictionaries containing string key-value pairs.
+    def stop(self):
+        return time.time() - self.start_time
 
-    Returns:
-        List[str]: A list of processed string values.
-    """
-    return [item['value'] for item in data if 'value' in item]
+    def timeit(self, func):
+        def wrapper(*args, **kwargs):
+            self.start()
+            result = func(*args, **kwargs)
+            elapsed = self.stop()
+            print(f'Function {func.__name__} took {elapsed:.4f} seconds.')
+            return result
+        return wrapper
 
+@Performance().timeit
+def expensive_operation(data):
+    total = 0
+    for number in data:
+        total += number ** 2
+    return total
 
-def calculate_average(values: List[float]) -> float:
-    """
-    Calculate the average of a list of float values.
-
-    Args:
-        values (List[float]): A list of float values.
-
-    Returns:
-        float: The average value, or 0 if the list is empty.
-    """
-    return sum(values) / len(values) if values else 0.0
-
-
-def filter_valid_data(data: List[Dict[str, str]], key: str) -> List[Dict[str, str]]:
-    """
-    Filter out dictionaries that do not contain the specified key.
-
-    Args:
-        data (List[Dict[str, str]]): The list of dictionaries to filter.
-        key (str): The key to check for in each dictionary.
-
-    Returns:
-        List[Dict[str, str]]: A list of filtered dictionaries.
-    """
-    return [item for item in data if key in item]
+if __name__ == '__main__':
+    data = range(10000)
+    result = expensive_operation(data)
+    print(f'Result: {result}')
