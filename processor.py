@@ -1,24 +1,25 @@
-import time
+import json
+import os
 
-class Processor:
-    def __init__(self):
-        self.data = []
+def load_json(filepath):
+    with open(filepath, 'r') as file:
+        return json.load(file)
 
-    def add_data(self, item):
-        self.data.append(item)
 
-    def process_data(self):
-        start_time = time.time()
-        results = [self._process_item(item) for item in self.data]
-        elapsed_time = time.time() - start_time
-        print(f"Processing took {elapsed_time:.4f} seconds")
-        return results
+def save_json(data, filepath):
+    with open(filepath, 'w') as file:
+        json.dump(data, file, indent=4)
 
-    def _process_item(self, item):
-        # Simulate processing delay
-        time.sleep(0.1)
-        return item * 2
 
-    def bulk_process(self, items):
-        self.data.extend(items)
-        return self.process_data()
+def list_files(directory):
+    return [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
+
+
+def read_file(filepath):
+    with open(filepath, 'r') as file:
+        return file.read()
+
+
+def write_file(data, filepath):
+    with open(filepath, 'w') as file:
+        file.write(data)
