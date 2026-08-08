@@ -1,23 +1,24 @@
-import json
-from typing import Any, Dict, List
+import time
 
-def load_json(file_path: str) -> Dict[str, Any]:
-    with open(file_path, 'r') as file:
-        return json.load(file)
+class Processor:
+    def __init__(self):
+        self.data = []
 
+    def add_data(self, item):
+        self.data.append(item)
 
-def save_json(file_path: str, data: Dict[str, Any]) -> None:
-    with open(file_path, 'w') as file:
-        json.dump(data, file, indent=4)
+    def process_data(self):
+        start_time = time.time()
+        results = [self._process_item(item) for item in self.data]
+        elapsed_time = time.time() - start_time
+        print(f"Processing took {elapsed_time:.4f} seconds")
+        return results
 
+    def _process_item(self, item):
+        # Simulate processing delay
+        time.sleep(0.1)
+        return item * 2
 
-def filter_data(data: List[Dict[str, Any]], condition: Dict[str, Any]) -> List[Dict[str, Any]]:
-    return [item for item in data if all(item.get(k) == v for k, v in condition.items())]
-
-
-def merge_data(data1: List[Dict[str, Any]], data2: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    return data1 + [item for item in data2 if item not in data1]
-
-
-def pretty_print(data: Any) -> None:
-    print(json.dumps(data, indent=4))
+    def bulk_process(self, items):
+        self.data.extend(items)
+        return self.process_data()
