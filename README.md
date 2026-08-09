@@ -1,56 +1,42 @@
 # automation-tool-76
 
-Automation-tool-76 is a versatile Python-based automation framework designed to streamline repetitive tasks and improve efficiency in workflows. This tool empowers developers and system administrators to automate various processes with ease and flexibility.
+Automation Tool 76 is a versatile Python utility aimed at simplifying repetitive tasks in software development and project management. With a focus on enhancing productivity, this tool allows users to automate key processes, minimizing manual effort and boosting efficiency.
 
 ## Features
 
-- **Task Scheduling**: Set up and manage automated tasks to run at specified intervals using a simple cron-like syntax.
-- **Scripting Capabilities**: Write custom scripts in Python to handle a variety of automation needs, from file management to API interactions.
-- **Modular Design**: Easily extend the tool’s functionality by adding modules for different tasks, promoting code reusability and organization.
-- **Comprehensive Logging**: Track the execution of tasks and keep detailed logs for troubleshooting and auditing purposes.
+- **Task Scheduling**: Automatically execute scripts or tasks at scheduled intervals, reducing the need for manual initiation.
+- **File Management**: Organize, rename, and manipulate multiple files in bulk with simple command-line arguments.
+- **Email Notifications**: Send automated email notifications upon the completion of tasks, keeping you updated without manual checking.
+- **API Integrations**: Easily connect with popular APIs to streamline workflows (supports REST and GraphQL).
 
 ## Installation
 
-To install automation-tool-76, follow these steps:
+To install Automation Tool 76, ensure you have Python 3.6 or higher. You can clone the repository and install the required dependencies using the following commands:
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/Developer/automation-tool-76.git
-   ```
-2. Navigate into the project directory:
-   ```bash
-   cd automation-tool-76
-   ```
-3. Install the required packages:
-   ```bash
-   pip install -r requirements.txt
-   ```
+```bash
+git clone https://github.com/Developer/automation-tool-76.git
+cd automation-tool-76
+pip install -r requirements.txt
+```
 
 ## Basic Usage Example
 
-To get started with automation-tool-76, create a new Python script that utilizes the provided framework. Here is a simple example:
+Once installed, you can quickly start using Automation Tool 76. Here’s a basic example that schedules a task to run every day:
 
 ```python
-from automation_tool import Scheduler
+from automation_tool import TaskScheduler
 
-# Create a new scheduler instance
-scheduler = Scheduler()
+def my_task():
+    print("Task executed!")
 
-# Define a task to run every minute
-def hello_world_task():
-    print("Hello, World!")
-
-# Schedule the task
-scheduler.every(1).minutes.do(hello_world_task)
-
-# Start the scheduler
-scheduler.start()
+scheduler = TaskScheduler()
+scheduler.schedule_task(my_task, interval='daily')
 ```
 
-This example demonstrates how to schedule a task that prints "Hello, World!" every minute. 
+This code snippet creates a task that runs the `my_task` function daily. Customize the `interval` parameter (options include 'hourly', 'daily', 'weekly') to fit your needs.
 
 ## License
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![License](https://img.shields.io/badge/license-MIT-green)
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
