@@ -1,26 +1,25 @@
-def optimized_sort(data):
-    if not data:
-        return data
-    return sorted(data, key=lambda x: (x is None, x))
+import os
+import json
 
-class DataProcessor:
-    def __init__(self, data):
-        self.data = data
 
-    def filter_none(self):
-        self.data = [x for x in self.data if x is not None]
+def read_json(file_path):
+    with open(file_path, 'r') as file:
+        return json.load(file)
 
-    def process(self):
-        self.filter_none()
-        return optimized_sort(self.data)
 
-def batch_process(data_batches):
-    results = []
-    for batch in data_batches:
-        processor = DataProcessor(batch)
-        results.append(processor.process())
-    return results
+def write_json(file_path, data):
+    with open(file_path, 'w') as file:
+        json.dump(data, file, indent=4)
 
-if __name__ == '__main__':
-    sample_data = [[3, None, 2], [1, 4, None]]
-    print(batch_process(sample_data))
+
+def ensure_directory_exists(directory):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+
+def get_file_extension(file_name):
+    return os.path.splitext(file_name)[1]
+
+
+def is_file_accessible(file_path):
+    return os.access(file_path, os.R_OK | os.W_OK)
