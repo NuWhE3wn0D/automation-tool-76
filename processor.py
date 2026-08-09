@@ -1,25 +1,21 @@
-import json
-import os
+import time
 
-def load_json(filepath):
-    with open(filepath, 'r') as file:
-        return json.load(file)
+class DataProcessor:
+    def __init__(self, data):
+        self.data = data
 
+    def process_data(self):
+        start_time = time.time()
+        result = [self._process_item(item) for item in self.data]
+        end_time = time.time()
+        print(f'Processing took {end_time - start_time:.2f} seconds')
+        return result
 
-def save_json(data, filepath):
-    with open(filepath, 'w') as file:
-        json.dump(data, file, indent=4)
+    def _process_item(self, item):
+        # Mock processing logic for demonstration
+        return item * 2
 
-
-def list_files(directory):
-    return [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
-
-
-def read_file(filepath):
-    with open(filepath, 'r') as file:
-        return file.read()
-
-
-def write_file(data, filepath):
-    with open(filepath, 'w') as file:
-        file.write(data)
+if __name__ == '__main__':
+    data = list(range(100000))
+    processor = DataProcessor(data)
+    processed_data = processor.process_data()
