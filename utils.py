@@ -1,18 +1,25 @@
-import time
-import requests
+import json
+import os
+from typing import Dict, Any
 
-class NetworkError(Exception):
-    pass
+def read_json_file(file_path: str) -> Dict[str, Any]:
+    with open(file_path, 'r') as file:
+        return json.load(file)
 
 
-def retry_request(url, max_retries=3, backoff_factor=0.3):
-    for attempt in range(max_retries):
-        try:
-            response = requests.get(url)
-            response.raise_for_status()
-            return response
-        except requests.exceptions.RequestException:
-            if attempt < max_retries - 1:
-                time.sleep(backoff_factor * (2 ** attempt))
-            else:
-                raise NetworkError(f'Failed to fetch {url} after {max_retries} attempts')
+def write_json_file(file_path: str, data: Dict[str, Any]) -> None:
+    with open(file_path, 'w') as file:
+        json.dump(data, file, indent=4)
+
+
+def list_files_in_directory(directory: str) -> list:
+    return [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
+
+
+def delete_file(file_path: str) -> None:
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
+
+def file_exists(file_path: str) -> bool:
+    return os.path.isfile(file_path)
