@@ -1,15 +1,56 @@
-import re
+from typing import Any, Dict
 
-def validate_email(email: str) -> bool:
-    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-    return re.match(pattern, email) is not None
 
-def validate_phone(phone: str) -> bool:
-    pattern = r'^(\+?\d{1,3}[- ]?)?\(?\d{3}\)?[- ]?\d{3}[- ]?\d{4}$'
-    return re.match(pattern, phone) is not None
+def validate_integer(value: Any) -> int:
+    """
+    Validates that the provided value is an integer.
 
-def validate_zip(zip_code: str) -> bool:
-    pattern = r'^[0-9]{5}(?:-[0-9]{4})?$'
-    return re.match(pattern, zip_code) is not None
+    Args:
+        value (Any): The value to validate.
 
-# Add additional validators if needed
+    Returns:
+        int: The validated integer value.
+
+    Raises:
+        ValueError: If the value is not an integer.
+    """
+    if not isinstance(value, int):
+        raise ValueError(f'Expected an integer, got {type(value).__name__}')
+    return value
+
+
+def validate_string(value: Any) -> str:
+    """
+    Validates that the provided value is a string.
+
+    Args:
+        value (Any): The value to validate.
+
+    Returns:
+        str: The validated string value.
+
+    Raises:
+        ValueError: If the value is not a string.
+    """
+    if not isinstance(value, str):
+        raise ValueError(f'Expected a string, got {type(value).__name__}')
+    return value
+
+
+def validate_positive_integer(value: Any) -> int:
+    """
+    Validates that the provided value is a positive integer.
+
+    Args:
+        value (Any): The value to validate.
+
+    Returns:
+        int: The validated positive integer value.
+
+    Raises:
+        ValueError: If the value is not a positive integer.
+    """
+    validated_value = validate_integer(value)
+    if validated_value <= 0:
+        raise ValueError('Expected a positive integer')
+    return validated_value
