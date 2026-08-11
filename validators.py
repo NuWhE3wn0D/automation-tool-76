@@ -1,56 +1,15 @@
-from typing import Any, Dict
+def validate_input(data):
+    if not isinstance(data, dict):
+        raise ValueError('Input must be a dictionary')
+    if 'name' not in data or not isinstance(data['name'], str):
+        raise ValueError('Name must be a string')
+    if 'age' not in data or not isinstance(data['age'], int) or data['age'] < 0:
+        raise ValueError('Age must be a non-negative integer')
+    return True
 
-
-def validate_integer(value: Any) -> int:
-    """
-    Validates that the provided value is an integer.
-
-    Args:
-        value (Any): The value to validate.
-
-    Returns:
-        int: The validated integer value.
-
-    Raises:
-        ValueError: If the value is not an integer.
-    """
-    if not isinstance(value, int):
-        raise ValueError(f'Expected an integer, got {type(value).__name__}')
-    return value
-
-
-def validate_string(value: Any) -> str:
-    """
-    Validates that the provided value is a string.
-
-    Args:
-        value (Any): The value to validate.
-
-    Returns:
-        str: The validated string value.
-
-    Raises:
-        ValueError: If the value is not a string.
-    """
-    if not isinstance(value, str):
-        raise ValueError(f'Expected a string, got {type(value).__name__}')
-    return value
-
-
-def validate_positive_integer(value: Any) -> int:
-    """
-    Validates that the provided value is a positive integer.
-
-    Args:
-        value (Any): The value to validate.
-
-    Returns:
-        int: The validated positive integer value.
-
-    Raises:
-        ValueError: If the value is not a positive integer.
-    """
-    validated_value = validate_integer(value)
-    if validated_value <= 0:
-        raise ValueError('Expected a positive integer')
-    return validated_value
+def validate_list_of_inputs(inputs):
+    if not isinstance(inputs, list):
+        raise ValueError('Input must be a list')
+    for item in inputs:
+        validate_input(item)
+    return True
