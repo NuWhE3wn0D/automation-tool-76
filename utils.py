@@ -1,25 +1,17 @@
-import json
-import os
-from typing import Dict, Any
+import time
+import requests
 
-def read_json_file(file_path: str) -> Dict[str, Any]:
-    with open(file_path, 'r') as file:
-        return json.load(file)
+class NetworkError(Exception):
+    pass
 
-
-def write_json_file(file_path: str, data: Dict[str, Any]) -> None:
-    with open(file_path, 'w') as file:
-        json.dump(data, file, indent=4)
-
-
-def list_files_in_directory(directory: str) -> list:
-    return [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
-
-
-def delete_file(file_path: str) -> None:
-    if os.path.exists(file_path):
-        os.remove(file_path)
-
-
-def file_exists(file_path: str) -> bool:
-    return os.path.isfile(file_path)
+def retry_request(url, retries=3, delay=2):
+    for attempt in range(retries):
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException:
+            if attempt < retries - 1:
+                time.sleep(delay)
+            else:
+                raise NetworkError(f'Failed to reach {url} after {retries} attempts')
