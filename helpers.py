@@ -1,18 +1,22 @@
-import re
+def read_file(file_path):
+    with open(file_path, 'r') as file:
+        return file.read()
 
-def validate_input(user_input):
-    if not user_input:
-        raise ValueError('Input cannot be empty.')
-    if not isinstance(user_input, str):
-        raise TypeError('Input must be a string.')
-    if not re.match('^[a-zA-Z0-9_]*$', user_input):
-        raise ValueError('Input contains invalid characters. Only alphanumeric and underscores are allowed.')
-    return True
 
-def process_data(data):
-    try:
-        validate_input(data)
-        # Process the validated input
-        return f'Processed: {data}'
-    except (ValueError, TypeError) as e:
-        return str(e)
+def write_file(file_path, content):
+    with open(file_path, 'w') as file:
+        file.write(content)
+
+
+def is_empty(string):
+    return not bool(string.strip())
+
+
+def merge_dicts(dict1, dict2):
+    merged = dict1.copy()
+    merged.update(dict2)
+    return merged
+
+
+def flatten_list(nested_list):
+    return [item for sublist in nested_list for item in sublist]
