@@ -1,18 +1,35 @@
-import json
-import os
+DATABASE_URI = 'sqlite:///example.db'
 
-DEFAULT_CONFIG = {
-    'setting1': 'value1',
-    'setting2': 10,
-    'setting3': True,
-}
+API_KEY = 'your_api_key_here'
 
-def load_config(file_path='config.json'):
-    if os.path.isfile(file_path):
-        with open(file_path, 'r') as config_file:
-            try:
-                config = json.load(config_file)
-                return {**DEFAULT_CONFIG, **config}
-            except json.JSONDecodeError:
-                return DEFAULT_CONFIG
-    return DEFAULT_CONFIG
+TIMEOUT_SECONDS = 30
+
+MAX_RETRIES = 5
+
+DEFAULT_THEME = 'light'
+
+SUPPORTED_LANGUAGES = ['en', 'es', 'fr', 'de']
+
+LOG_LEVEL = 'INFO'
+
+FILE_PATH = '/path/to/your/file'
+
+SMTP_SERVER = 'smtp.example.com'
+
+SMTP_PORT = 587
+
+EMAIL_ADDRESS = 'example@example.com'
+
+EMAIL_PASSWORD = 'password_here'
+
+def get_timeout():
+    return TIMEOUT_SECONDS
+
+def get_max_retries():
+    return MAX_RETRIES
+
+def get_database_uri():
+    return DATABASE_URI
+
+def get_supported_languages():
+    return SUPPORTED_LANGUAGES
