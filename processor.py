@@ -1,21 +1,25 @@
-import time
+import json
+from typing import Any, Dict, List
 
-class DataProcessor:
-    def __init__(self, data):
-        self.data = data
+def load_json(file_path: str) -> Dict[str, Any]:
+    with open(file_path, 'r') as file:
+        return json.load(file)
 
-    def process_data(self):
-        start_time = time.time()
-        result = [self._process_item(item) for item in self.data]
-        end_time = time.time()
-        print(f'Processing took {end_time - start_time:.2f} seconds')
-        return result
 
-    def _process_item(self, item):
-        # Mock processing logic for demonstration
-        return item * 2
+def save_json(data: Dict[str, Any], file_path: str) -> None:
+    with open(file_path, 'w') as file:
+        json.dump(data, file, ensure_ascii=False, indent=4)
 
-if __name__ == '__main__':
-    data = list(range(100000))
-    processor = DataProcessor(data)
-    processed_data = processor.process_data()
+
+def merge_dicts(dict1: Dict[str, Any], dict2: Dict[str, Any]) -> Dict[str, Any]:
+    result = dict1.copy()
+    result.update(dict2)
+    return result
+
+
+def filter_list(data: List[Dict[str, Any]], key: str, value: Any) -> List[Dict[str, Any]]:
+    return [item for item in data if item.get(key) == value]
+
+
+def get_keys(data: Dict[str, Any]) -> List[str]:
+    return list(data.keys())
