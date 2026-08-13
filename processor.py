@@ -1,25 +1,33 @@
 import json
-from typing import Any, Dict, List
 
-def load_json(file_path: str) -> Dict[str, Any]:
-    with open(file_path, 'r') as file:
-        return json.load(file)
+class InputValidationError(Exception):
+    pass
 
+class InputProcessor:
+    def __init__(self, data):
+        self.data = data
 
-def save_json(data: Dict[str, Any], file_path: str) -> None:
-    with open(file_path, 'w') as file:
-        json.dump(data, file, ensure_ascii=False, indent=4)
+    def validate_input(self):
+        if not isinstance(self.data, dict):
+            raise InputValidationError("Input must be a dictionary.")
+        if 'name' not in self.data or not isinstance(self.data['name'], str):
+            raise InputValidationError("Name must be a string.")
+        if 'age' not in self.data or not isinstance(self.data['age'], int):
+            raise InputValidationError("Age must be an integer.")
 
+    def process(self):
+        self.validate_input()
+        output = {
+            'message': f"Hello, {self.data['name']}!",
+            'age': self.data['age']
+        }
+        return json.dumps(output)
 
-def merge_dicts(dict1: Dict[str, Any], dict2: Dict[str, Any]) -> Dict[str, Any]:
-    result = dict1.copy()
-    result.update(dict2)
-    return result
-
-
-def filter_list(data: List[Dict[str, Any]], key: str, value: Any) -> List[Dict[str, Any]]:
-    return [item for item in data if item.get(key) == value]
-
-
-def get_keys(data: Dict[str, Any]) -> List[str]:
-    return list(data.keys())
+if __name__ == '__main__':
+    sample_input = {'name': 'Alice', 'age': 30}
+    processor = InputProcessor(sample_input)
+    try:
+        result = processor.process()
+        print(result)
+    except InputValidationError as e:
+        print(f'Validation Error: {e}')
