@@ -1,19 +1,31 @@
-import time
-import random
+AUTH_TOKEN = 'your_auth_token'
 
-MAX_RETRIES = 5
-RETRY_DELAY = 2
+BASE_URL = 'https://api.example.com'
 
-class NetworkError(Exception):
-    pass
+TIMEOUT = 30
 
-def retry_network_operation(operation):
-    for attempt in range(MAX_RETRIES):
-        try:
-            return operation()
-        except NetworkError:
-            if attempt < MAX_RETRIES - 1:
-                time.sleep(RETRY_DELAY)
-                RETRY_DELAY *= 2  # exponential backoff
-            else:
-                raise
+RETRY_LIMIT = 3
+
+HEADERS = {
+    'Content-Type': 'application/json',
+    'User-Agent': 'automation-tool-76'
+}
+
+STATUS_CODES = {
+    'OK': 200,
+    'CREATED': 201,
+    'NO_CONTENT': 204,
+    'BAD_REQUEST': 400,
+    'UNAUTHORIZED': 401,
+    'FORBIDDEN': 403,
+    'NOT_FOUND': 404,
+    'INTERNAL_SERVER_ERROR': 500
+}
+
+DEFAULT_CONFIG = {
+    'log_level': 'INFO',
+    'max_retries': 5,
+    'timeout': 60
+}
+
+SUPPORTED_FORMATS = ['json', 'xml', 'csv']
