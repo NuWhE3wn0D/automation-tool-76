@@ -1,35 +1,39 @@
-from typing import Dict
+from typing import Any, Dict
 
 
-def process_data(data: Dict[str, str]) -> None:
+def handle_request(data: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Process the input data and perform necessary actions.
-
+    Process the incoming request data.
+    
     Args:
-        data (Dict[str, str]): A dictionary containing data to process.
+        data (Dict[str, Any]): The request data containing key-value pairs.
+    
+    Returns:
+        Dict[str, Any]: The processed response data.
     """
-    for key, value in data.items():
-        print(f'{key}: {value}')
+    # Example processing logic (to be replaced with actual implementation)
+    response = {"status": "success", "received": data}
+    return response
 
 
-def handle_request(request: Dict[str, str]) -> None:
+def handle_error(error: Exception) -> Dict[str, Any]:
     """
-    Handle an incoming request and process the data from it.
-
+    Handle errors that occur during request processing.
+    
     Args:
-        request (Dict[str, str]): A dictionary representing the request data.
+        error (Exception): The error that occurred.
+    
+    Returns:
+        Dict[str, Any]: The error response data.
     """
-    if 'data' in request:
-        process_data(request['data'])
-    else:
-        print('No data to process')
+    return {"status": "error", "message": str(error)}
 
 
-if __name__ == '__main__':
-    sample_request = {
-        'data': {
-            'name': 'Automation Tool',
-            'version': '76'
-        }
-    }
-    handle_request(sample_request)
+if __name__ == "__main__":
+    sample_data = {"key": "value"}
+    try:
+        result = handle_request(sample_data)
+        print(result)
+    except Exception as e:
+        error_response = handle_error(e)
+        print(error_response)
