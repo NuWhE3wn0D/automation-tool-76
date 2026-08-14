@@ -1,15 +1,25 @@
 def validate_input(data):
     if not isinstance(data, dict):
-        raise ValueError('Input must be a dictionary')
-    if 'name' not in data or not isinstance(data['name'], str):
-        raise ValueError('Name must be a string')
-    if 'age' not in data or not isinstance(data['age'], int) or data['age'] < 0:
-        raise ValueError('Age must be a non-negative integer')
-    return True
+        return False, 'Input must be a dictionary'
+    if 'key' not in data:
+        return False, 'Missing required key'
+    return True, 'Input is valid'
 
-def validate_list_of_inputs(inputs):
-    if not isinstance(inputs, list):
-        raise ValueError('Input must be a list')
-    for item in inputs:
-        validate_input(item)
-    return True
+def validate_numeric(value):
+    if not isinstance(value, (int, float)):
+        return False, 'Value must be a number'
+    return True, 'Value is valid'
+
+# Example of using validations in a main processing loop
+if __name__ == '__main__':
+    sample_data = {'key': 123}
+    is_valid, message = validate_input(sample_data)
+    if not is_valid:
+        print(f'Validation Error: {message}')
+    else:
+        value = sample_data['key']
+        is_valid, message = validate_numeric(value)
+        if not is_valid:
+            print(f'Validation Error: {message}')
+        else:
+            print('Processing value...')
