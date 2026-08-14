@@ -1,22 +1,21 @@
-class CustomError(Exception):
-    pass
-
-class NotFoundError(CustomError):
-    def __init__(self, message='Item not found'):
+class CustomException(Exception):
+    def __init__(self, message):
+        super().__init__(message)
         self.message = message
-        super().__init__(self.message)
 
-class ValidationError(CustomError):
-    def __init__(self, message='Validation failed'):
-        self.message = message
-        super().__init__(self.message)
+class ValidationError(CustomException):
+    def __init__(self, field, message='Invalid value'):
+        super().__init__(message)
+        self.field = field
 
-class PermissionDeniedError(CustomError):
-    def __init__(self, message='Permission denied'):
-        self.message = message
-        super().__init__(self.message)
+class ResourceNotFound(CustomException):
+    def __init__(self, resource):
+        message = f'Resource {resource} not found'
+        super().__init__(message)
+        self.resource = resource
 
-class TimeoutError(CustomError):
-    def __init__(self, message='Operation timed out'):
-        self.message = message
-        super().__init__(self.message)
+class UnauthorizedAccess(CustomException):
+    def __init__(self, user):
+        message = f'Unauthorized access for user {user}'
+        super().__init__(message)
+        self.user = user
