@@ -1,23 +1,32 @@
-import os
 import json
-from typing import Any, Dict, List
 
-def load_json(file_path: str) -> Dict[str, Any]:
-    with open(file_path, 'r') as file:
+def load_json(file_path):
+    with open(file_path, 'r', encoding='utf-8') as file:
         return json.load(file)
 
 
-def save_json(file_path: str, data: Dict[str, Any]) -> None:
-    with open(file_path, 'w') as file:
-        json.dump(data, file, indent=4)
+def save_json(data, file_path):
+    with open(file_path, 'w', encoding='utf-8') as file:
+        json.dump(data, file, ensure_ascii=False, indent=4)
 
 
-def clean_directory(directory: str) -> None:
-    for filename in os.listdir(directory):
-        file_path = os.path.join(directory, filename)
-        if os.path.isfile(file_path):
-            os.remove(file_path)
+def merge_dicts(*dicts):
+    result = {}
+    for d in dicts:
+        result.update(d)
+    return result
 
 
-def list_files(directory: str) -> List[str]:
-    return [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
+def filter_dict_keys(data_dict, keys):
+    return {key: data_dict[key] for key in keys if key in data_dict}
+
+
+def flatten_dict(nested_dict, parent_key='', sep='_'):
+    items = []
+    for key, value in nested_dict.items():
+        new_key = f'{parent_key}{sep}{key}' if parent_key else key
+        if isinstance(value, dict):
+            items.extend(flatten_dict(value, new_key, sep=sep).items())
+        else:
+            items.append((new_key, value))
+    return dict(items)
