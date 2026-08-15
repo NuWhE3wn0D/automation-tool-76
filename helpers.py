@@ -1,22 +1,34 @@
-def read_file(file_path):
-    with open(file_path, 'r') as file:
-        return file.read()
+def optimized_filter(data, threshold):
+    return [item for item in data if item > threshold]
 
 
-def write_file(file_path, content):
-    with open(file_path, 'w') as file:
-        file.write(content)
+def batch_process(data, batch_size):
+    for i in range(0, len(data), batch_size):
+        yield data[i:i + batch_size]
 
 
-def is_empty(string):
-    return not bool(string.strip())
+def parallel_map(func, iterable, max_workers=None):
+    from concurrent.futures import ProcessPoolExecutor
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        return list(executor.map(func, iterable))
 
 
-def merge_dicts(dict1, dict2):
-    merged = dict1.copy()
-    merged.update(dict2)
-    return merged
+def merge_dicts(dicts):
+    result = {}
+    for d in dicts:
+        result.update(d)
+    return result
 
 
-def flatten_list(nested_list):
-    return [item for sublist in nested_list for item in sublist]
+def process_data(data, threshold, batch_size):
+    filtered_data = optimized_filter(data, threshold)
+    for batch in batch_process(filtered_data, batch_size):
+        yield batch
+
+
+def compute_sum(data):
+    return sum(data)
+
+
+def run_optimized_process(data, threshold, batch_size):
+    return [compute_sum(batch) for batch in process_data(data, threshold, batch_size)]
