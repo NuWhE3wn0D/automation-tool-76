@@ -1,21 +1,22 @@
-class CustomException(Exception):
+class CustomError(Exception):
+    pass
+
+class ValidationError(CustomError):
     def __init__(self, message):
-        super().__init__(message)
         self.message = message
+        super().__init__(self.message)
 
-class ValidationError(CustomException):
-    def __init__(self, field, message='Invalid value'):
-        super().__init__(message)
-        self.field = field
+class ProcessingError(CustomError):
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
 
-class ResourceNotFound(CustomException):
+class ConfigError(CustomError):
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
+
+class NotFoundError(CustomError):
     def __init__(self, resource):
-        message = f'Resource {resource} not found'
-        super().__init__(message)
-        self.resource = resource
-
-class UnauthorizedAccess(CustomException):
-    def __init__(self, user):
-        message = f'Unauthorized access for user {user}'
-        super().__init__(message)
-        self.user = user
+        self.message = f'{resource} not found'
+        super().__init__(self.message)
