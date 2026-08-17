@@ -1,31 +1,25 @@
-AUTH_TOKEN = 'your_auth_token'
+from typing import Final
 
-BASE_URL = 'https://api.example.com'
+API_URL: Final[str] = 'https://api.example.com'
+TIMEOUT: Final[int] = 30
+RETRY_COUNT: Final[int] = 5
 
-TIMEOUT = 30
+class StatusCodes:
+    SUCCESS: Final[int] = 200
+    NOT_FOUND: Final[int] = 404
+    SERVER_ERROR: Final[int] = 500
+    
+    @staticmethod
+    def is_success(code: int) -> bool:
+        """Check if the status code is successful."""
+        return code == StatusCodes.SUCCESS
 
-RETRY_LIMIT = 3
+    @staticmethod
+    def is_client_error(code: int) -> bool:
+        """Check if the status code is a client error."""
+        return 400 <= code < 500
 
-HEADERS = {
-    'Content-Type': 'application/json',
-    'User-Agent': 'automation-tool-76'
-}
-
-STATUS_CODES = {
-    'OK': 200,
-    'CREATED': 201,
-    'NO_CONTENT': 204,
-    'BAD_REQUEST': 400,
-    'UNAUTHORIZED': 401,
-    'FORBIDDEN': 403,
-    'NOT_FOUND': 404,
-    'INTERNAL_SERVER_ERROR': 500
-}
-
-DEFAULT_CONFIG = {
-    'log_level': 'INFO',
-    'max_retries': 5,
-    'timeout': 60
-}
-
-SUPPORTED_FORMATS = ['json', 'xml', 'csv']
+    @staticmethod
+    def is_server_error(code: int) -> bool:
+        """Check if the status code is a server error."""
+        return 500 <= code < 600
