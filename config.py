@@ -1,27 +1,30 @@
 import json
-import os
 
 class ConfigLoader:
-    def __init__(self, filepath, defaults=None):
-        self.filepath = filepath
-        self.defaults = defaults if defaults is not None else {}
-        self.config = self.load_config()
+    def __init__(self, default_config):
+        self.default_config = default_config
+        self.config = default_config
 
-    def load_config(self):
-        if not os.path.exists(self.filepath):
-            return self.defaults
-        with open(self.filepath, 'r') as f:
-            return {**self.defaults, **json.load(f)}
+    def load(self, filepath):
+        try:
+            with open(filepath, 'r') as file:
+                user_config = json.load(file)
+            self.config = {**self.default_config, **user_config}
+        except FileNotFoundError:
+            self.config = self.default_config
+        except json.JSONDecodeError:
+            self.config = self.default_config
 
     def get(self, key, default=None):
         return self.config.get(key, default)
 
-    def __getitem__(self, key):
-        return self.config[key]
+# Example default configuration
+default_config = {
+    'setting_1': 'default_value_1',
+    'setting_2': 'default_value_2',
+}
 
-    def __setitem__(self, key, value):
-        self.config[key] = value
-
-    def save(self):
-        with open(self.filepath, 'w') as f:
-            json.dump(self.config, f, indent=4)
+# Usage
+# loader = ConfigLoader(default_config)
+# loader.load('user_config.json')
+# value = loader.get('setting_1')
