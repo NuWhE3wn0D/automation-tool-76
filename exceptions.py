@@ -1,17 +1,20 @@
 class CustomError(Exception):
-    """Exception raised for custom errors."""
-    def __init__(self, message: str) -> None:
+    def __init__(self, message):
+        super().__init__(message)
         self.message = message
-        super().__init__(self.message)
 
 class NotFoundError(CustomError):
-    """Exception raised when a resource is not found."""
-    def __init__(self, resource: str) -> None:
-        super().__init__(f'{resource} not found')
+    pass
 
 class ValidationError(CustomError):
-    """Exception raised when validation fails."""
-    def __init__(self, field: str, errors: list) -> None:
+    def __init__(self, message, field):
+        super().__init__(message)
         self.field = field
-        self.errors = errors
-        super().__init__(f'Validation failed for {field}: {
+
+class PermissionError(CustomError):
+    pass
+
+def handle_exception(e):
+    if isinstance(e, CustomError):
+        return {'error': e.message}
+    return {'error': 'An unexpected error occurred.'}
