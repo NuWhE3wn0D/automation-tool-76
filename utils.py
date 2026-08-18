@@ -1,28 +1,31 @@
-from typing import List, Dict
+import json
+
+def load_json(file_path):
+    with open(file_path, 'r') as f:
+        return json.load(f)
 
 
-def calculate_average(numbers: List[float]) -> float:
-    """Calculate the average of a list of numbers."""
-    if not numbers:
-        return 0.0
-    return sum(numbers) / len(numbers)
+def save_json(data, file_path):
+    with open(file_path, 'w') as f:
+        json.dump(data, f, indent=4)
 
 
-def filter_dictionary(data: Dict[str, int], threshold: int) -> Dict[str, int]:
-    """Filter a dictionary by a threshold value."""
-    return {key: value for key, value in data.items() if value > threshold}
+def merge_dicts(dict1, dict2):
+    result = dict1.copy()
+    result.update(dict2)
+    return result
 
 
-def format_string(template: str, **kwargs: Dict[str, str]) -> str:
-    """Format a string with given keyword arguments."""
-    return template.format(**kwargs)
+def filter_dict(original_dict, keys):
+    return {key: original_dict[key] for key in keys if key in original_dict}
 
 
-def merge_lists(list1: List[int], list2: List[int]) -> List[int]:
-    """Merge two lists into one, avoiding duplicates."""
-    return list(set(list1 + list2))
-
-
-def get_unique_elements(elements: List[int]) -> List[int]:
-    """Return a list of unique elements from the input list."""
-    return list(set(elements))
+def flatten_dict(nested_dict, parent_key='', sep='_'):
+    items = []
+    for k, v in nested_dict.items():
+        new_key = f'{parent_key}{sep}{k}' if parent_key else k
+        if isinstance(v, dict):
+            items.extend(flatten_dict(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
