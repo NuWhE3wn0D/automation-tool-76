@@ -1,40 +1,27 @@
-from typing import Any, Dict, Optional
+import json
 
+class InputValidationError(Exception):
+    pass
 
-def handle_request(data: Dict[str, Any], timeout: Optional[int] = 30) -> Dict[str, Any]:
-    """Processes a request and returns a response.
+class Handler:
+    def __init__(self):
+        self.valid_inputs = set(['option1', 'option2', 'option3'])
 
-    Args:
-        data (Dict[str, Any]): The input data for processing.
-        timeout (Optional[int], optional): The timeout for the request. Defaults to 30.
+    def validate_input(self, user_input):
+        if user_input not in self.valid_inputs:
+            raise InputValidationError(f'Invalid input: {user_input}')
 
-    Returns:
-        Dict[str, Any]: The processed response.
-    """
-    response = {}  # Initialize response
-    # Simulated processing logic
-    response['status'] = 'success'
-    response['data'] = data
-    return response
-
-
-def handle_error(error: Exception) -> Dict[str, Any]:
-    """Handles exceptions and formats the error response.
-
-    Args:
-        error (Exception): The exception that occurred.
-
-    Returns:
-        Dict[str, Any]: The formatted error response.
-    """
-    return {'status': 'error', 'message': str(error)}
-
+    def process_inputs(self, inputs):
+        results = []
+        for user_input in inputs:
+            try:
+                self.validate_input(user_input)
+                results.append({'input': user_input, 'status': 'valid'})
+            except InputValidationError as e:
+                results.append({'input': user_input, 'status': 'invalid', 'error': str(e)})
+        return json.dumps(results)
 
 if __name__ == '__main__':
-    sample_data = {'key': 'value'}
-    try:
-        result = handle_request(sample_data)
-        print(result)
-    except Exception as e:
-        error_response = handle_error(e)
-        print(error_response)
+    handler = Handler()
+    test_inputs = ['option1', 'wrong_option', 'option2']
+    print(handler.process_inputs(test_inputs))
