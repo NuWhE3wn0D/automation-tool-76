@@ -1,26 +1,32 @@
-import os
 import json
+import os
 
-class Config:
-    def __init__(self, path):
-        self.path = path
-        self.data = self.load_config()
+class FileProcessor:
+    def __init__(self, filepath):
+        self.filepath = filepath
 
-    def load_config(self):
-        if not os.path.exists(self.path):
-            raise FileNotFoundError(f'Config file not found: {self.path}')
-        with open(self.path, 'r') as f:
-            return json.load(f)
+    def read_file(self):
+        if not os.path.isfile(self.filepath):
+            raise FileNotFoundError(f'File {self.filepath} does not exist.')
+        try:
+            with open(self.filepath, 'r') as file:
+                return json.load(file)
+        except json.JSONDecodeError:
+            raise ValueError('File is not a valid JSON.')
+        except Exception as e:
+            raise RuntimeError(f'An error occurred while reading the file: {e}')
 
-class Processor:
-    def __init__(self, config):
-        self.config = config
-
-    def process(self):
-        # Sample processing logic
-        print('Processing with config:', self.config.data)
+    def write_file(self, data):
+        try:
+            with open(self.filepath, 'w') as file:
+                json.dump(data, file)
+        except IOError as e:
+            raise RuntimeError(f'Error writing to file: {e}')
 
 if __name__ == '__main__':
-    config = Config('config.json')
-    processor = Processor(config)
-    processor.process()
+    processor = FileProcessor('data.json')
+    try:
+        data = processor.read_file()
+        print(data)
+    except (FileNotFoundError, ValueError, RuntimeError) as error:
+        print(f'Error: {error}')
