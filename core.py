@@ -1,26 +1,25 @@
-import json
-import os
+import time
 
-class AutomationTool:
-    def __init__(self, config_file):
-        self.config_file = config_file
-        self.load_config()
+class PerformanceMonitor:
+    def __init__(self):
+        self.start_time = time.time()
 
-    def load_config(self):
-        if not os.path.exists(self.config_file):
-            raise FileNotFoundError(f'Config file {self.config_file} not found.')
-        with open(self.config_file) as f:
-            self.config = json.load(f)
+    def elapsed_time(self):
+        return time.time() - self.start_time
 
-    def run(self):
-        # Main logic for the automation tool
-        for task in self.config.get('tasks', []):
-            self.execute_task(task)
+    def log_performance(self, process_name):
+        elapsed = self.elapsed_time()
+        print(f'Performance of {process_name}: {elapsed:.4f} seconds')
+        self.start_time = time.time()
 
-    def execute_task(self, task):
-        # Placeholder for task execution
-        print(f'Executing task: {task}')
+monitor = PerformanceMonitor()
+
+# Example usage in a function
+
+def heavy_computation():
+    # Simulating heavy computation
+    time.sleep(2)  
+    monitor.log_performance('heavy_computation')
 
 if __name__ == '__main__':
-    tool = AutomationTool('config.json')
-    tool.run()
+    heavy_computation()
