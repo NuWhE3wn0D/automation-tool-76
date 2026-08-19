@@ -1,32 +1,26 @@
-import time
+import os
+import json
 
-class Performance:
-    def __init__(self):
-        self.start_time = None
+class Config:
+    def __init__(self, path):
+        self.path = path
+        self.data = self.load_config()
 
-    def start(self):
-        self.start_time = time.time()
+    def load_config(self):
+        if not os.path.exists(self.path):
+            raise FileNotFoundError(f'Config file not found: {self.path}')
+        with open(self.path, 'r') as f:
+            return json.load(f)
 
-    def stop(self):
-        return time.time() - self.start_time
+class Processor:
+    def __init__(self, config):
+        self.config = config
 
-    def timeit(self, func):
-        def wrapper(*args, **kwargs):
-            self.start()
-            result = func(*args, **kwargs)
-            elapsed = self.stop()
-            print(f'Function {func.__name__} took {elapsed:.4f} seconds.')
-            return result
-        return wrapper
-
-@Performance().timeit
-def expensive_operation(data):
-    total = 0
-    for number in data:
-        total += number ** 2
-    return total
+    def process(self):
+        # Sample processing logic
+        print('Processing with config:', self.config.data)
 
 if __name__ == '__main__':
-    data = range(10000)
-    result = expensive_operation(data)
-    print(f'Result: {result}')
+    config = Config('config.json')
+    processor = Processor(config)
+    processor.process()
