@@ -1,27 +1,36 @@
-def memoize(func):
-    cache = {}
-    def memoized(*args):
-        if args not in cache:
-            cache[args] = func(*args)
-        return cache[args]
-    return memoized
+import logging
+from logging.handlers import RotatingFileHandler
+import os
 
-@memoize
-def fibonacci(n):
-    if n < 2:
-        return n
-    return fibonacci(n - 1) + fibonacci(n - 2)
-
-def batch_process(items, function, batch_size=10):
-    for i in range(0, len(items), batch_size):
-        yield function(items[i:i + batch_size])
-
-def parallel_process(func, iterable):
-    from concurrent.futures import ThreadPoolExecutor
-    with ThreadPoolExecutor() as executor:
-        return list(executor.map(func, iterable))
-
-if __name__ == '__main__':
-    print(fibonacci(10))
-    print(list(batch_process(range(100), sum)))
-    print(parallel_process(lambda x: x * 2, range(10)))
+def setup_logger(
+    name: str = "automation-tool-76",
+    log_file: str = "logs/automation.log",
+    level: int = logging.INFO,
+    max_bytes: int = 10 * 1024 * 1024,
+    backup_count: int = 5,
+    console_output: bool = True
+) -> logging.Logger:
+    logger = logging.getLogger(name)
+    if logger.hasHandlers():
+        return logger
+    logger.setLevel(level)
+    log_dir = os.path.dirname(log_file)
+    if log_dir:
+        os.makedirs(log_dir, exist_ok=True)
+    file_handler = RotatingFileHandler(
+        log_file,
+        maxBytes=max_bytes,
+        backupCount=backup_count,
+        encoding="utf-8"
+    )
+    formatter = logging.Formatter(
+        fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
+    )
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+    if console_output:
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
+    return logger
