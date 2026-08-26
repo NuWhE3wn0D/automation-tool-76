@@ -1,25 +1,45 @@
-def validate_input(data):
-    if not isinstance(data, dict):
-        return False, 'Input must be a dictionary'
-    if 'key' not in data:
-        return False, 'Missing required key'
-    return True, 'Input is valid'
+from typing import Any, Dict, List
 
-def validate_numeric(value):
-    if not isinstance(value, (int, float)):
-        return False, 'Value must be a number'
-    return True, 'Value is valid'
 
-# Example of using validations in a main processing loop
-if __name__ == '__main__':
-    sample_data = {'key': 123}
-    is_valid, message = validate_input(sample_data)
-    if not is_valid:
-        print(f'Validation Error: {message}')
-    else:
-        value = sample_data['key']
-        is_valid, message = validate_numeric(value)
-        if not is_valid:
-            print(f'Validation Error: {message}')
+class ValidationError(Exception):
+    pass
+
+
+def validate_input_payload(payload: Dict[str, Any]) -> None:
+    if not isinstance(payload, dict):
+        raise ValidationError("Payload must be a dictionary")
+    
+    required_keys: List[str] = ["task_id", "action", "data"]
+    for key in required_keys:
+        if key not in payload:
+            raise ValidationError(f"Missing required key: {key}")
+        
+    if not isinstance(payload["task_id"], str) or not payload["task_id"].strip():
+        raise ValidationError("task_id must be a non-empty string")
+    
+    if not isinstance(payload["action"], str) or not payload["action"].strip():
+        raise ValidationError("action must be a non-empty string")
+        
+    if not isinstance(payload["data"], (dict, list)):
+        raise ValidationError("data must be a dictionary or a list")
+
+
+def sanitize_string(value: str) -> str:
+    if not isinstance(value, str):
+        return ""
+    return value.strip()
+
+
+def validate_batch_inputs(items: List[Any]) -> List[Dict[str, Any]]:
+    if not isinstance(items, list):
+        raise ValidationError("Batch input must be a list")
+    
+    validated_items: List[Dict[str, Any]] = []
+    for item in items:
+        if isinstance(item, dict):
+            validate_input_payload(item)
+            validated_items.append(item)
         else:
-            print('Processing value...')
+            raise ValidationError("Batch item must be a valid dictionary")
+            
+    return validated_items
