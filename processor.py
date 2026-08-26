@@ -1,21 +1,27 @@
-def process_data(data):
-    return [item * 2 for item in data]
+import logging
+from typing import Any, Dict, Optional
 
+logger = logging.getLogger(__name__)
 
-def filter_data(data, threshold):
-    return [item for item in data if item > threshold]
+class ProcessingError(Exception):
+    pass
 
-
-def aggregate_data(data):
-    return sum(data) / len(data) if data else 0
-
-
-def format_results(results):
-    return "Results: " + ", ".join(map(str, results))
-
-
-def process_and_format(data, threshold):
-    filtered = filter_data(data, threshold)
-    processed = process_data(filtered)
-    aggregated = aggregate_data(processed)
-    return format_results(processed) + f" | Aggregated: {aggregated}"
+def process_payload(data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    if data is None:
+        logger.error("Received null payload")
+        raise ProcessingError("Payload cannot be null")
+    
+    if not isinstance(data, dict):
+        logger.error("Invalid payload type: %s", type(data).__name__)
+        raise ProcessingError("Payload must be a dictionary")
+    
+    try:
+        result = {}
+        for key, value in data.items():
+            if not isinstance(key, str):
+                raise ValueError(f"Key {key} must be a string")
+            result[key] = str(value).strip()
+        return result
+    except Exception as e:
+        logger.exception("Unexpected error during payload processing")
+        raise ProcessingError(f"Failed to process payload: {e}") from e
