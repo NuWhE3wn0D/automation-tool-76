@@ -1,39 +1,33 @@
-import time
-from functools import wraps
-from typing import Callable, Any, Dict
+from functools import lru_cache
+from typing import Any, Callable, Dict, List
 
-class PerformanceOptimizer:
-    def __init__(self) -> None:
-        self._cache: Dict[tuple, Any] = {}
 
-    def memoize(self, func: Callable[..., Any]) -> Callable[..., Any]:
-        @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            key = (func.__name__, args, frozenset(kwargs.items()))
-            if key not in self._cache:
-                self._cache[key] = func(*args, **kwargs)
-            return self._cache[key]
-        return wrapper
+class DataProcessor:
+    def __init__(self, batch_size: int = 100) -> None:
+        self.batch_size = batch_size
 
-    def clear_cache(self) -> None:
-        self._cache.clear()
+    @lru_cache(maxsize=1024)
+    def _compute_heavy_metric(self, value: int) -> float:
+        return float(value ** 2 * 3.14159) / 2.71828
 
-optimizer = PerformanceOptimizer()
+    def process_batch(self, items: List[int]) -> List[float]:
+        return [self._compute_heavy_metric(item) for item in items]
 
-def timed_execution(func: Callable[..., Any]) -> Callable[..., Any]:
-    @wraps(func)
+    def stream_process(self, data_stream: List[int]) -> List[List[float]]:
+        results = []
+        for i in range(0, len(data_stream), self.batch_size):
+            batch = data_stream[i:i + self.batch_size]
+            results.append(self.process_batch(batch))
+        return results
+
+
+def optimize_pipeline(pipeline_fn: Callable[..., Any]) -> Callable[..., Any]:
+    cache: Dict[str, Any] = {}
+
     def wrapper(*args: Any, **kwargs: Any) -> Any:
-        start_time = time.perf_counter()
-        result = func(*args, **kwargs)
-        duration = time.perf_counter() - start_time
-        print(f"{func.__name__} executed in {duration:.6f}s")
-        return result
-    return wrapper
+        key = str(args) + str(kwargs)
+        if key not in cache:
+            cache[key] = pipeline_fn(*args, **kwargs)
+        return cache[key]
 
-@optimizer.memoize
-@timed_execution
-def heavy_computation(data_size: int) -> int:
-    total = 0
-    for i in range(data_size):
-        total += i * i
-    return total
+    return wrapper
