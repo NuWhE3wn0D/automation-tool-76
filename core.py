@@ -1,25 +1,39 @@
 import time
+from functools import wraps
+from typing import Callable, Any, Dict
 
-class PerformanceMonitor:
-    def __init__(self):
-        self.start_time = time.time()
+class PerformanceOptimizer:
+    def __init__(self) -> None:
+        self._cache: Dict[tuple, Any] = {}
 
-    def elapsed_time(self):
-        return time.time() - self.start_time
+    def memoize(self, func: Callable[..., Any]) -> Callable[..., Any]:
+        @wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            key = (func.__name__, args, frozenset(kwargs.items()))
+            if key not in self._cache:
+                self._cache[key] = func(*args, **kwargs)
+            return self._cache[key]
+        return wrapper
 
-    def log_performance(self, process_name):
-        elapsed = self.elapsed_time()
-        print(f'Performance of {process_name}: {elapsed:.4f} seconds')
-        self.start_time = time.time()
+    def clear_cache(self) -> None:
+        self._cache.clear()
 
-monitor = PerformanceMonitor()
+optimizer = PerformanceOptimizer()
 
-# Example usage in a function
+def timed_execution(func: Callable[..., Any]) -> Callable[..., Any]:
+    @wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        start_time = time.perf_counter()
+        result = func(*args, **kwargs)
+        duration = time.perf_counter() - start_time
+        print(f"{func.__name__} executed in {duration:.6f}s")
+        return result
+    return wrapper
 
-def heavy_computation():
-    # Simulating heavy computation
-    time.sleep(2)  
-    monitor.log_performance('heavy_computation')
-
-if __name__ == '__main__':
-    heavy_computation()
+@optimizer.memoize
+@timed_execution
+def heavy_computation(data_size: int) -> int:
+    total = 0
+    for i in range(data_size):
+        total += i * i
+    return total
