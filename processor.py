@@ -1,38 +1,42 @@
-import sys
+from typing import Any, Dict, Generator, Iterable, List, Type
 
-def process_items(items):
-    if not items:
-        raise ValueError("Input list cannot be empty")
-    if not isinstance(items, list):
-        raise TypeError("Input must be a list")
-    results = []
-    for idx, item in enumerate(items):
+
+def chunk_iterable(iterable: Iterable[Any], size: int) -> Generator[List[Any], None, None]:
+    iterator = iter(iterable)
+    while True:
+        chunk = []
         try:
-            if not isinstance(item, (int, float)):
-                raise TypeError(f"Item at index {idx} must be a number")
-            if item < 0:
-                raise ValueError(f"Negative value not allowed at index {idx}")
-            result = item ** 2
-            results.append(result)
-        except (TypeError, ValueError) as err:
-            print(f"Error at item {idx}: {err}", file=sys.stderr)
-            results.append(0)
-        except Exception as err:
-            print(f"Unexpected error at item {idx}: {err}", file=sys.stderr)
-            results.append(None)
-    return results
+            for _ in range(size):
+                chunk.append(next(iterator))
+            yield chunk
+        except StopIteration:
+            if chunk:
+                yield chunk
+            break
 
-def main():
-    sample_data = [4, -2, "three", 5.5, 0, 10]
+
+def deep_merge(dict_a: Dict[Any, Any], dict_b: Dict[Any, Any]) -> Dict[Any, Any]:
+    result = dict_a.copy()
+    for key, value in dict_b.items():
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = deep_merge(result[key], value)
+        else:
+            result[key] = value
+    return result
+
+
+def flatten(items: Iterable[Any]) -> List[Any]:
+    flat_list = []
+    for item in items:
+        if isinstance(item, Iterable) and not isinstance(item, (str, bytes)):
+            flat_list.extend(flatten(item))
+        else:
+            flat_list.append(item)
+    return flat_list
+
+
+def safe_cast(value: Any, to_type: Type[Any], default: Any = None) -> Any:
     try:
-        output = process_items(sample_data)
-        print("Processed results:", output)
-    except (ValueError, TypeError) as e:
-        print(f"Input validation failed: {e}", file=sys.stderr)
-        sys.exit(1)
-    except Exception as e:
-        print(f"Unexpected failure: {e}", file=sys.stderr)
-        sys.exit(1)
-
-if __name__ == "__main__":
-    main()
+        return to_type(value)
+    except (ValueError, TypeError):
+        return default
