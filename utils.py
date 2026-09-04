@@ -1,60 +1,30 @@
-import json
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+import time
+import logging
+from functools import wraps
+from typing import Callable, Any, Tuple, Type
 
-def read_file(filepath: Union[str, Path]) -> str:
-    """Read content from a file.
+logger = logging.getLogger(__name__)
 
-    Args:
-        filepath: Path to the file.
-    Returns:
-        Content of the file.
-    """
-    path = Path(filepath)
-    with path.open('r', encoding='utf-8') as file:
-        return file.read()
-
-def write_file(filepath: Union[str, Path], content: str) -> None:
-    """Write content to a file.
-
-    Args:
-        filepath: Path to the file.
-        content: Content to write.
-    """
-    path = Path(filepath)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open('w', encoding='utf-8') as file:
-        file.write(content)
-
-def parse_json(data: str) -> Dict[str, Any]:
-    """Parse a JSON string.
-
-    Args:
-        data: The JSON string.
-    Returns:
-        The parsed dict.
-    """
-    return json.loads(data)
-
-def serialize_json(data: Dict[str, Any], indent: Optional[int] = None) -> str:
-    """Serialize to JSON string.
-
-    Args:
-        data: The data dict.
-        indent: Optional indent.
-    Returns:
-        The JSON string.
-    """
-    return json.dumps(data, indent=indent)
-
-def find_items(data: List[Dict[str, Any]], key: str, value: Any) -> List[Dict[str, Any]]:
-    """Find matching items.
-
-    Args:
-        data: List of dicts.
-        key: Key for match.
-        value: Value for match.
-    Returns:
-        List of matches.
-    """
-    return [item for item in data if item.get(key) == value]
+def retry(
+    exceptions: Tuple[Type[BaseException], ...] = (Exception,),
+    tries: int = 3,
+    delay: float = 1.0,
+    backoff: float = 2.0,
+) -> Callable:
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            m_tries, m_delay = tries, delay
+            while m_tries > 1:
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as e:
+                    logger.warning(
+                        f"Retrying {func.__name__} in {m_delay}s due to: {e}"
+                    )
+                    time.sleep(m_delay)
+                    m_tries -= 1
+                    m_delay *= backoff
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
