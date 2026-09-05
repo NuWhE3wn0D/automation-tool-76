@@ -1,50 +1,29 @@
-import time
-from typing import Any, Callable, Dict, List
+import functools
+from typing import Callable, Any, Dict
 
-class Task:
-    """Represents a single automation task with name, function and optional delay."""
-    def __init__(self, name: str, func: Callable[[], Any], delay: float = 0.0) -> None:
-        self.name: str = name
-        self.func: Callable[[], Any] = func
-        self.delay: float = delay
+CACHE: Dict[tuple, Any] = {}
 
-class AutomationCore:
-    """Core automation tool for executing general tasks sequentially."""
-    def __init__(self) -> None:
-        self.tasks: List[Task] = []
+def memoize(func: Callable) -> Callable:
+    @functools.wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        key = (func.__name__, args, tuple(sorted(kwargs.items())))
+        if key not in CACHE:
+            CACHE[key] = func(*args, **kwargs)
+        return CACHE[key]
+    return wrapper
 
-    def add_task(self, task: Task) -> None:
-        """Add a new task to the execution queue."""
-        self.tasks.append(task)
+class DataProcessor:
+    def __init__(self, data: list):
+        self.data = data
 
-    def run_all(self) -> Dict[str, Any]:
-        """Run all added tasks in order and return status results."""
-        results: Dict[str, Any] = {}
-        for task in self.tasks:
-            if task.delay > 0:
-                time.sleep(task.delay)
-            try:
-                result: Any = task.func()
-                results[task.name] = {"status": "success", "result": result}
-            except Exception as e:
-                results[task.name] = {"status": "error", "error": str(e)}
-        return results
+    @memoize
+    def heavy_computation(self, factor: int) -> list:
+        return [x * factor for x in self.data]
 
-def example_task(value: int) -> int:
-    """Sample task function that squares the input value."""
-    return value ** 2
+def clear_cache() -> None:
+    CACHE.clear()
 
-def create_task(name: str, value: int) -> Task:
-    """Factory to create a task using example_task."""
-    return Task(name, lambda: example_task(value))
-
-def get_task_count(core: AutomationCore) -> int:
-    """Return the number of tasks in the core."""
-    return len(core.tasks)
-
-if __name__ == "__main__":
-    core = AutomationCore()
-    core.add_task(create_task("task1", 5))
-    core.add_task(Task("task2", lambda: 10 + 20, 0.1))
-    print(core.run_all())
-    print(get_task_count(core))
+if __name__ == '__main__':
+    processor = DataProcessor([1, 2, 3, 4, 5])
+    result = processor.heavy_computation(10)
+    print(result)
