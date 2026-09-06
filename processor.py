@@ -1,7 +1,4 @@
-import logging
-from typing import Any, Dict, List
-
-logger = logging.getLogger(__name__)
+from typing import Any, Dict, List, Optional
 
 
 class ValidationError(Exception):
@@ -9,35 +6,44 @@ class ValidationError(Exception):
 
 
 class TaskProcessor:
-    def __init__(self, allowed_actions: List[str]) -> None:
-        self.allowed_actions = allowed_actions
+    def __init__(self, allowed_types: Optional[List[str]] = None):
+        self.allowed_types = allowed_types or ["sync", "backup", "cleanup"]
 
-    def validate_task(self, task: Dict[str, Any]) -> None:
+    def validate_task(self, task: Any) -> Dict[str, Any]:
         if not isinstance(task, dict):
             raise ValidationError("Task must be a dictionary")
 
-        task_id = task.get("task_id")
-        if not task_id or not isinstance(task_id, str):
-            raise ValidationError("Missing or invalid task_id")
+        task_id = task.get("id")
+        if task_id is None or not isinstance(task_id, int):
+            raise ValidationError("Task 'id' must be an integer")
 
-        action = task.get("action")
-        if not action or action not in self.allowed_actions:
-            raise ValidationError(f"Invalid or unsupported action: {action}")
+        task_type = task.get("type")
+        if task_type is None or task_type not in self.allowed_types:
+            raise ValidationError(f"Task 'type' must be one of {self.allowed_types}")
 
         payload = task.get("payload")
         if payload is not None and not isinstance(payload, dict):
-            raise ValidationError("Payload must be a dictionary")
+            raise ValidationError("Task 'payload' must be a dictionary")
 
-    def process_queue(self, tasks: List[Dict[str, Any]]) -> List[str]:
-        successful_tasks = []
+        return {
+            "id": task_id,
+            "type": task_type,
+            "payload": payload or {},
+            "status": "validated",
+        }
+
+    def process_batch(self, tasks: List[Any]) -> List[Dict[str, Any]]:
+        results = []
         for task in tasks:
             try:
-                self.validate_task(task)
-                task_id = task["task_id"]
-                logger.info(f"Successfully processed task: {task_id}")
-                successful_tasks.append(task_id)
-            except ValidationError as e:
-                logger.error(f"Task validation failed: {e}")
-            except Exception as e:
-                logger.error(f"Unexpected error processing task: {e}")
-        return successful_tasks
+                validated_task = self.validate_task(task)
+                validated_task["status"] = "processed"
+                results.append(validated_task)
+            except ValidationError as err:
+                task_id = task.get("id") if isinstance(task, dict) else None
+                results.append({
+                    "id": task_id,
+                    "status": "failed",
+                    "error": str(err)
+                })
+        return results
