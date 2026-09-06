@@ -1,29 +1,35 @@
-import functools
-from typing import Callable, Any, Dict
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
+from typing import Any, Callable, Dict, List, Tuple
 
-CACHE: Dict[tuple, Any] = {}
 
-def memoize(func: Callable) -> Callable:
-    @functools.wraps(func)
-    def wrapper(*args: Any, **kwargs: Any) -> Any:
-        key = (func.__name__, args, tuple(sorted(kwargs.items())))
-        if key not in CACHE:
-            CACHE[key] = func(*args, **kwargs)
-        return CACHE[key]
-    return wrapper
+class TaskEngine:
+    def __init__(self, max_workers: int = 4):
+        self.executor = ThreadPoolExecutor(max_workers=max_workers)
+        self._memo: Dict[str, Any] = {}
 
-class DataProcessor:
-    def __init__(self, data: list):
-        self.data = data
+    @lru_cache(maxsize=256)
+    def _get_key(self, name: str, params_str: str) -> str:
+        return f"{name}:{hash(params_str)}"
 
-    @memoize
-    def heavy_computation(self, factor: int) -> list:
-        return [x * factor for x in self.data]
+    def execute_cached(self, name: str, func: Callable[..., Any], *args: Any) -> Any:
+        key = self._get_key(name, str(args))
+        if key not in self._memo:
+            self._memo[key] = func(*args)
+        return self._memo[key]
 
-def clear_cache() -> None:
-    CACHE.clear()
+    async def run_batch(self, tasks: List[Tuple[Callable[..., Any], Tuple[Any, ...]]]) -> List[Any]:
+        loop = asyncio.get_running_loop()
+        futures = [
+            loop.run_in_executor(self.executor, func, *args)
+            for func, args in tasks
+        ]
+        return await asyncio.gather(*futures)
 
-if __name__ == '__main__':
-    processor = DataProcessor([1, 2, 3, 4, 5])
-    result = processor.heavy_computation(10)
-    print(result)
+    def clear_cache(self) -> None:
+        self._memo.clear()
+        self._get_key.cache_clear()
+
+    def close(self) -> None:
+        self.executor.shutdown(wait=True)
