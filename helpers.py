@@ -1,28 +1,38 @@
-import time
-from functools import wraps
-from typing import Callable, Any, Dict
-
-_CACHE: Dict[str, tuple] = {}
+import os
+import shutil
+from typing import List
 
 
-def memoize(ttl: int = 60) -> Callable:
-    def decorator(func: Callable) -> Callable:
-        @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            key = f"{func.__name__}:{args}:{kwargs}"
-            now = time.time()
-            if key in _CACHE:
-                result, timestamp = _CACHE[key]
-                if now - timestamp < ttl:
-                    return result
-            result = func(*args, **kwargs)
-            _CACHE[key] = (result, now)
-            return result
-        return wrapper
-    return decorator
+def clean_directory(path: str, extensions: List[str]) -> int:
+    count = 0
+    if not os.path.exists(path):
+        return count
+
+    for item in os.listdir(path):
+        item_path = os.path.join(path, item)
+        if os.path.isfile(item_path):
+            if any(item.endswith(ext) for ext in extensions):
+                os.remove(item_path)
+                count += 1
+        elif os.path.isdir(item_path):
+            shutil.rmtree(item_path)
+            count += 1
+    return count
 
 
-def batch_process(items: list, batch_size: int = 100) -> list:
-    if batch_size <= 0:
-        raise ValueError("Batch size must be greater than zero")
-    return [items[i:i + batch_size] for i in range(0, len(items), batch_size)]
+def get_directory_size(path: str) -> int:
+    total_size = 0
+    for dirpath, _, filenames in os.walk(path):
+        for f in filenames:
+            fp = os.path.join(dirpath, f)
+            if os.path.exists(fp):
+                total_size += os.path.getsize(fp)
+    return total_size
+
+
+def format_bytes(size: int) -> str:
+    for unit in ['B', 'KB', 'MB', 'GB']:
+        if size < 1024:
+            return f"{size:.2f} {unit}"
+        size /= 1024
+    return f"{size:.2f} TB"
