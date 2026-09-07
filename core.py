@@ -1,35 +1,46 @@
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
-from functools import lru_cache
-from typing import Any, Callable, Dict, List, Tuple
+import logging
+from typing import Callable, Any, Dict, List
 
+class AutomationEngine:
+    """A core engine to manage and execute automation tasks sequentially."""
 
-class TaskEngine:
-    def __init__(self, max_workers: int = 4):
-        self.executor = ThreadPoolExecutor(max_workers=max_workers)
-        self._memo: Dict[str, Any] = {}
+    def __init__(self) -> None:
+        self.tasks: Dict[str, Callable[..., Any]] = {}
+        self.results: Dict[str, Any] = {}
 
-    @lru_cache(maxsize=256)
-    def _get_key(self, name: str, params_str: str) -> str:
-        return f"{name}:{hash(params_str)}"
+    def register_task(self, name: str, func: Callable[..., Any]) -> None:
+        """Registers a task with a unique name.
 
-    def execute_cached(self, name: str, func: Callable[..., Any], *args: Any) -> Any:
-        key = self._get_key(name, str(args))
-        if key not in self._memo:
-            self._memo[key] = func(*args)
-        return self._memo[key]
+        Args:
+            name: The unique identifier for the task.
+            func: The callable function representing the task.
+        """
+        if name in self.tasks:
+            raise ValueError(f"Task '{name}' is already registered.")
+        self.tasks[name] = func
 
-    async def run_batch(self, tasks: List[Tuple[Callable[..., Any], Tuple[Any, ...]]]) -> List[Any]:
-        loop = asyncio.get_running_loop()
-        futures = [
-            loop.run_in_executor(self.executor, func, *args)
-            for func, args in tasks
-        ]
-        return await asyncio.gather(*futures)
+    def execute_pipeline(self, pipeline: List[str], *args: Any, **kwargs: Any) -> Dict[str, Any]:
+        """Executes a list of registered tasks sequentially.
 
-    def clear_cache(self) -> None:
-        self._memo.clear()
-        self._get_key.cache_clear()
+        Args:
+            pipeline: A list of task names to execute in order.
+            *args: Positional arguments passed to the first task.
+            **kwargs: Keyword arguments passed to the first task.
 
-    def close(self) -> None:
-        self.executor.shutdown(wait=True)
+        Returns:
+            A dictionary mapping task names to their execution results.
+        """
+        last_result = None
+        for i, task_name in enumerate(pipeline):
+            if task_name not in self.tasks:
+                raise KeyError(f"Task '{task_name}' is not registered.")
+
+            task = self.tasks[task_name]
+            if i == 0:
+                last_result = task(*args, **kwargs)
+            else:
+                last_result = task(last_result)
+
+            self.results[task_name] = last_result
+
+        return self.results
