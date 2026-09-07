@@ -1,49 +1,23 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Union
 
+def sanitize_data(data: Union[Dict, List]) -> Union[Dict, List]:
+    if isinstance(data, dict):
+        return {str(k): sanitize_data(v) for k, v in data.items() if v is not None}
+    if isinstance(data, list):
+        return [sanitize_data(i) for i in data if i is not None]
+    return data
 
-class ValidationError(Exception):
-    pass
+def flatten_data(data: Dict, parent_key: str = '', sep: str = '_') -> Dict:
+    items = []
+    for k, v in data.items():
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, dict):
+            items.extend(flatten_data(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
 
-
-class TaskProcessor:
-    def __init__(self, allowed_types: Optional[List[str]] = None):
-        self.allowed_types = allowed_types or ["sync", "backup", "cleanup"]
-
-    def validate_task(self, task: Any) -> Dict[str, Any]:
-        if not isinstance(task, dict):
-            raise ValidationError("Task must be a dictionary")
-
-        task_id = task.get("id")
-        if task_id is None or not isinstance(task_id, int):
-            raise ValidationError("Task 'id' must be an integer")
-
-        task_type = task.get("type")
-        if task_type is None or task_type not in self.allowed_types:
-            raise ValidationError(f"Task 'type' must be one of {self.allowed_types}")
-
-        payload = task.get("payload")
-        if payload is not None and not isinstance(payload, dict):
-            raise ValidationError("Task 'payload' must be a dictionary")
-
-        return {
-            "id": task_id,
-            "type": task_type,
-            "payload": payload or {},
-            "status": "validated",
-        }
-
-    def process_batch(self, tasks: List[Any]) -> List[Dict[str, Any]]:
-        results = []
-        for task in tasks:
-            try:
-                validated_task = self.validate_task(task)
-                validated_task["status"] = "processed"
-                results.append(validated_task)
-            except ValidationError as err:
-                task_id = task.get("id") if isinstance(task, dict) else None
-                results.append({
-                    "id": task_id,
-                    "status": "failed",
-                    "error": str(err)
-                })
-        return results
+def batch_process(items: List[Any], chunk_size: int = 100) -> List[List[Any]]:
+    if chunk_size <= 0:
+        raise ValueError("chunk_size must be positive")
+    return [items[i:i + chunk_size] for i in range(0, len(items), chunk_size)]
