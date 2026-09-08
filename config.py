@@ -1,50 +1,33 @@
-import json
 import os
+import json
+import logging
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
-DEFAULT_CONFIG: Dict[str, Any] = {
-    "app_name": "automation-tool-76",
-    "version": "1.0.0",
-    "debug": False,
-    "log_level": "INFO",
-    "max_retries": 3,
-    "timeout": 30,
-    "output_dir": "./output",
-}
+logger = logging.getLogger(__name__)
 
+class ConfigError(Exception):
+    pass
 
-class ConfigLoader:
-    def __init__(self, config_path: Optional[str] = None):
-        self._config = DEFAULT_CONFIG.copy()
-        if config_path:
-            self.load_from_file(config_path)
-        self.load_from_env()
-
-    def load_from_file(self, path: str) -> None:
-        file_path = Path(path)
-        if not file_path.exists():
-            raise FileNotFoundError(f"Config file not found: {path}")
-
+def load_config(path: str) -> Dict[str, Any]:
+    file_path = Path(path)
+    if not file_path.exists():
+        raise ConfigError(f"config file missing: {path}")
+    
+    try:
         with open(file_path, "r", encoding="utf-8") as f:
             data = json.load(f)
-            if isinstance(data, dict):
-                self._config.update(data)
+            if not isinstance(data, dict):
+                raise ValueError("invalid config format: expected dict")
+            return data
+    except (json.JSONDecodeError, PermissionError, ValueError) as e:
+        logger.error(f"config loading failure: {e}")
+        raise ConfigError(f"configuration processing error: {e}") from e
 
-    def load_from_env(self, prefix: str = "APP_") -> None:
-        for key, value in os.environ.items():
-            if key.startswith(prefix):
-                config_key = key[len(prefix) :].lower()
-                if value.isdigit():
-                    parsed_val: Any = int(value)
-                elif value.lower() in ("true", "false"):
-                    parsed_val = value.lower() == "true"
-                else:
-                    parsed_val = value
-                self._config[config_key] = parsed_val
-
-    def get(self, key: str, default: Any = None) -> Any:
-        return self._config.get(key, default)
-
-    def to_dict(self) -> Dict[str, Any]:
-        return self._config.copy()
+def get_env_variable(key: str, default: Any = None) -> Any:
+    value = os.getenv(key)
+    if value is None:
+        if default is not None:
+            return default
+        raise ConfigError(f"missing environment variable: {key}")
+    return value
