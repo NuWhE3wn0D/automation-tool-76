@@ -1,38 +1,46 @@
-import os
-import shutil
-from typing import List
+import time
+import logging
+from typing import Any, Callable, Type, Tuple, Optional
+
+logger = logging.getLogger(__name__)
 
 
-def clean_directory(path: str, extensions: List[str]) -> int:
-    count = 0
-    if not os.path.exists(path):
-        return count
-
-    for item in os.listdir(path):
-        item_path = os.path.join(path, item)
-        if os.path.isfile(item_path):
-            if any(item.endswith(ext) for ext in extensions):
-                os.remove(item_path)
-                count += 1
-        elif os.path.isdir(item_path):
-            shutil.rmtree(item_path)
-            count += 1
-    return count
+def safe_execute(
+    func: Callable[..., Any],
+    *args: Any,
+    default: Optional[Any] = None,
+    exceptions: Tuple[Type[BaseException], ...] = (Exception,),
+    **kwargs: Any
+) -> Any:
+    try:
+        return func(*args, **kwargs)
+    except exceptions as err:
+        logger.warning("Execution failed for %s: %s", getattr(func, "__name__", str(func)), err)
+        return default
 
 
-def get_directory_size(path: str) -> int:
-    total_size = 0
-    for dirpath, _, filenames in os.walk(path):
-        for f in filenames:
-            fp = os.path.join(dirpath, f)
-            if os.path.exists(fp):
-                total_size += os.path.getsize(fp)
-    return total_size
+def retry_operation(
+    func: Callable[..., Any],
+    retries: int = 3,
+    delay: float = 1.0,
+    backoff: float = 2.0,
+    exceptions: Tuple[Type[BaseException], ...] = (Exception,)
+) -> Any:
+    current_delay = delay
+    for attempt in range(1, retries + 1):
+        try:
+            return func()
+        except exceptions as err:
+            if attempt == retries:
+                logger.error("Operation failed after %d attempts: %s", retries, err)
+                raise
+            logger.info("Attempt %d/%d failed, retrying in %.1fs...", attempt, retries, current_delay)
+            time.sleep(current_delay)
+            current_delay *= backoff
 
 
-def format_bytes(size: int) -> str:
-    for unit in ['B', 'KB', 'MB', 'GB']:
-        if size < 1024:
-            return f"{size:.2f} {unit}"
-        size /= 1024
-    return f"{size:.2f} TB"
+def sanitize_input(val: Any, max_length: int = 1000) -> str:
+    if val is None:
+        return ""
+    str_val = str(val).strip()
+    return str_val[:max_length] if len(str_val) > max_length else str_val
