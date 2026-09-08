@@ -1,46 +1,33 @@
+import os
 import logging
-from typing import Callable, Any, Dict, List
+from typing import List, Optional
 
 class AutomationEngine:
-    """A core engine to manage and execute automation tasks sequentially."""
+    def __init__(self, target_dir: str = './data'):
+        self.target_dir = target_dir
+        self.logger = logging.getLogger(__name__)
 
-    def __init__(self) -> None:
-        self.tasks: Dict[str, Callable[..., Any]] = {}
-        self.results: Dict[str, Any] = {}
+    def list_files(self, extension: str = '.log') -> List[str]:
+        try:
+            return [f for f in os.listdir(self.target_dir) if f.endswith(extension)]
+        except FileNotFoundError:
+            self.logger.error(f'directory {self.target_dir} not found')
+            return []
 
-    def register_task(self, name: str, func: Callable[..., Any]) -> None:
-        """Registers a task with a unique name.
+    def cleanup_old_files(self, limit: int = 10) -> int:
+        files = sorted(
+            [os.path.join(self.target_dir, f) for f in self.list_files()],
+            key=os.path.getmtime
+        )
+        
+        removed_count = 0
+        if len(files) > limit:
+            for file_path in files[:-limit]:
+                os.remove(file_path)
+                removed_count += 1
+        return removed_count
 
-        Args:
-            name: The unique identifier for the task.
-            func: The callable function representing the task.
-        """
-        if name in self.tasks:
-            raise ValueError(f"Task '{name}' is already registered.")
-        self.tasks[name] = func
-
-    def execute_pipeline(self, pipeline: List[str], *args: Any, **kwargs: Any) -> Dict[str, Any]:
-        """Executes a list of registered tasks sequentially.
-
-        Args:
-            pipeline: A list of task names to execute in order.
-            *args: Positional arguments passed to the first task.
-            **kwargs: Keyword arguments passed to the first task.
-
-        Returns:
-            A dictionary mapping task names to their execution results.
-        """
-        last_result = None
-        for i, task_name in enumerate(pipeline):
-            if task_name not in self.tasks:
-                raise KeyError(f"Task '{task_name}' is not registered.")
-
-            task = self.tasks[task_name]
-            if i == 0:
-                last_result = task(*args, **kwargs)
-            else:
-                last_result = task(last_result)
-
-            self.results[task_name] = last_result
-
-        return self.results
+def run_automation(path: str) -> None:
+    engine = AutomationEngine(path)
+    count = engine.cleanup_old_files()
+    print(f'successfully removed {count} files')
