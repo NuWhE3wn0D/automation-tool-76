@@ -1,46 +1,40 @@
+import json
 import time
-import logging
-from typing import Any, Callable, Type, Tuple, Optional
+from typing import Any, Callable, List, Optional, TypeVar
 
-logger = logging.getLogger(__name__)
+T = TypeVar("T")
 
 
-def safe_execute(
-    func: Callable[..., Any],
-    *args: Any,
-    default: Optional[Any] = None,
-    exceptions: Tuple[Type[BaseException], ...] = (Exception,),
-    **kwargs: Any
-) -> Any:
+def retry(
+    retries: int = 3, delay: float = 1.0, backoff: float = 2.0
+) -> Callable:
+    def decorator(func: Callable[..., T]) -> Callable[..., T]:
+        def wrapper(*args: Any, **kwargs: Any) -> T:
+            current_delay = delay
+            for attempt in range(retries):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as err:
+                    if attempt == retries - 1:
+                        raise err
+                    time.sleep(current_delay)
+                    current_delay *= backoff
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+def chunk_list(items: List[T], size: int) -> List[List[T]]:
+    if size <= 0:
+        raise ValueError("Chunk size must be greater than zero")
+    return [items[i : i + size] for i in range(0, len(items), size)]
+
+
+def safe_json_load(filepath: str) -> Optional[Any]:
     try:
-        return func(*args, **kwargs)
-    except exceptions as err:
-        logger.warning("Execution failed for %s: %s", getattr(func, "__name__", str(func)), err)
-        return default
-
-
-def retry_operation(
-    func: Callable[..., Any],
-    retries: int = 3,
-    delay: float = 1.0,
-    backoff: float = 2.0,
-    exceptions: Tuple[Type[BaseException], ...] = (Exception,)
-) -> Any:
-    current_delay = delay
-    for attempt in range(1, retries + 1):
-        try:
-            return func()
-        except exceptions as err:
-            if attempt == retries:
-                logger.error("Operation failed after %d attempts: %s", retries, err)
-                raise
-            logger.info("Attempt %d/%d failed, retrying in %.1fs...", attempt, retries, current_delay)
-            time.sleep(current_delay)
-            current_delay *= backoff
-
-
-def sanitize_input(val: Any, max_length: int = 1000) -> str:
-    if val is None:
-        return ""
-    str_val = str(val).strip()
-    return str_val[:max_length] if len(str_val) > max_length else str_val
+        with open(filepath, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
