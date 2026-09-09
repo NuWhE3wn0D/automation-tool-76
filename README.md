@@ -1,56 +1,44 @@
 # automation-tool-76
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/downloads/)
-
-`automation-tool-76` is a lightweight, extensible Python utility designed to streamline repetitive local workflows and file management tasks. It eliminates manual friction by batch-processing routine operations through a clean, configuration-driven interface.
+A high-performance Python-based automation framework designed to streamline repetitive task execution and workflow management. It provides a modular architecture for developers to integrate custom logic into cross-platform system operations.
 
 ## Features
 
-- **Batch File Transformations:** Quickly rename, move, or convert directory structures using custom YAML rules.
-- **Scheduled Execution:** Run background tasks at specified intervals without relying on heavy system cron jobs.
-- **Actionable Logging:** Outputs colorized, structured logs to the console while maintaining a detailed audit trail in `automation.log`.
-- **Plugin Architecture:** Easily write custom Python scripts to extend core capabilities for specialized local environments.
+*   **Task Scheduling Engine:** Execute scripts on a cron-like schedule or trigger them based on real-time system events.
+*   **Modular Plugin System:** Extend core functionality by dropping custom Python modules into the `plugins/` directory without altering the core codebase.
+*   **Logging & Telemetry:** Built-in structured logging with integration for local file storage or remote monitoring via HTTP endpoints.
+*   **Concurrent Execution:** Leverages `asyncio` for non-blocking task processing, ensuring maximum resource efficiency during heavy workflows.
 
 ## Installation
 
-Ensure you have Python 3.8 or higher installed on your system. 
+Ensure you have Python 3.9 or higher installed. Clone the repository and install the dependencies:
 
 ```bash
-# Clone the repository
 git clone https://github.com/Developer/automation-tool-76.git
 cd automation-tool-76
-
-# Create a virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows use: venv\Scripts\activate
-
-# Install dependencies
 pip install -r requirements.txt
 ```
 
 ## Usage
 
-1. Create a `config.yaml` file in the root directory to define your tasks:
-```yaml
-tasks:
-  - name: "organize-downloads"
-    source: "~/Downloads"
-    destination: "~/Documents/Archive"
-    file_types: [".pdf", ".docx"]
-    action: "move"
+You can trigger a workflow by specifying the task configuration file. To run a one-time job, execute the following command:
+
+```bash
+python main.py --config configs/default.yaml --run-now
 ```
 
-2. Run the tool to execute your automation sequence:
+For continuous background execution, deploy the tool as a service using the provided Dockerfile or your system's `systemd` manager:
+
 ```bash
-python main.py --config config.yaml
+python main.py --daemonize
 ```
 
-To run in continuous monitoring mode, append the `--watch` flag:
-```bash
-python main.py --config config.yaml --watch
-```
+## Configuration
+
+Settings are managed via the `configs/` directory. Modify `settings.yaml` to define your task paths, API keys, and notification thresholds. For detailed documentation on the configuration schema, please refer to the `docs/` folder.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+Distributed under the MIT License. See `LICENSE` for more information.
