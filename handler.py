@@ -1,27 +1,24 @@
-import json
+import time
+import functools
+from typing import Callable, Any, Type, Tuple
 
-class InputValidationError(Exception):
-    pass
+def retry(exceptions: Tuple[Type[Exception], ...], tries: int = 3, delay: float = 1.0, backoff: float = 2.0):
+    def decorator(func: Callable):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs) -> Any:
+            mtries, mdelay = tries, delay
+            while mtries > 1:
+                try:
+                    return func(*args, **kwargs)
+                except exceptions:
+                    time.sleep(mdelay)
+                    mtries -= 1
+                    mdelay *= backoff
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
 
-class Handler:
-    def __init__(self):
-        self.valid_inputs = set(['option1', 'option2', 'option3'])
-
-    def validate_input(self, user_input):
-        if user_input not in self.valid_inputs:
-            raise InputValidationError(f'Invalid input: {user_input}')
-
-    def process_inputs(self, inputs):
-        results = []
-        for user_input in inputs:
-            try:
-                self.validate_input(user_input)
-                results.append({'input': user_input, 'status': 'valid'})
-            except InputValidationError as e:
-                results.append({'input': user_input, 'status': 'invalid', 'error': str(e)})
-        return json.dumps(results)
-
-if __name__ == '__main__':
-    handler = Handler()
-    test_inputs = ['option1', 'wrong_option', 'option2']
-    print(handler.process_inputs(test_inputs))
+@retry(ConnectionError, tries=3, delay=2)
+def fetch_data(url: str) -> str:
+    # Simulate network request
+    return f"data from {url}"
