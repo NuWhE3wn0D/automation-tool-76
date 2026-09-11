@@ -1,31 +1,31 @@
+import functools
 import re
-from typing import Any, Dict
+from typing import Any, Callable, Dict
 
-def validate_input_data(data: Dict[str, Any]) -> bool:
-    if not isinstance(data, dict):
+_CACHE: Dict[str, Any] = {}
+_EMAIL_REGEX = re.compile(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$')
+
+
+def memoize_validator(func: Callable) -> Callable:
+    @functools.wraps(func)
+    def wrapper(*args: Any) -> Any:
+        key = f"{func.__name__}:{args}"
+        if key not in _CACHE:
+            _CACHE[key] = func(*args)
+        return _CACHE[key]
+    return wrapper
+
+
+@memoize_validator
+def validate_email_format(email: str) -> bool:
+    if not isinstance(email, str):
         return False
-    
-    required_fields = ['id', 'payload', 'timestamp']
-    if not all(field in data for field in required_fields):
-        return False
+    return bool(_EMAIL_REGEX.match(email))
 
-    if not isinstance(data['id'], int) or data['id'] < 0:
-        return False
 
-    if not isinstance(data['payload'], str) or len(data['payload']) > 1024:
-        return False
+def batch_validate_emails(emails: list[str]) -> list[bool]:
+    return [validate_email_format(e) for e in emails]
 
-    if not isinstance(data['timestamp'], (int, float)):
-        return False
 
-    return True
-
-def sanitize_payload(payload: str) -> str:
-    return re.sub(r'[^a-zA-Z0-9\s]', '', payload).strip()
-
-def process_validation(data: Dict[str, Any]) -> Dict[str, Any]:
-    if not validate_input_data(data):
-        raise ValueError('invalid input data format')
-    
-    data['payload'] = sanitize_payload(data['payload'])
-    return data
+def clear_validation_cache() -> None:
+    _CACHE.clear()
