@@ -1,33 +1,44 @@
-import os
-import logging
-from typing import List, Optional
+from typing import Any, Dict, List
 
-class AutomationEngine:
-    def __init__(self, target_dir: str = './data'):
-        self.target_dir = target_dir
-        self.logger = logging.getLogger(__name__)
 
-    def list_files(self, extension: str = '.log') -> List[str]:
+class ValidationError(Exception):
+    pass
+
+
+def validate_input(data: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(data, dict):
+        raise ValidationError("Input item must be a dictionary")
+
+    required_keys = {"id", "action", "payload"}
+    missing = required_keys - data.keys()
+    if missing:
+        raise ValidationError(f"Missing required fields: {', '.join(missing)}")
+
+    if not isinstance(data["id"], (int, str)) or not str(data["id"]).strip():
+        raise ValidationError("Field 'id' must be a non-empty string or integer")
+
+    if not isinstance(data["action"], str) or not data["action"].strip():
+        raise ValidationError("Field 'action' must be a non-empty string")
+
+    if not isinstance(data["payload"], dict):
+        raise ValidationError("Field 'payload' must be a dictionary")
+
+    return data
+
+
+def run_processing_loop(items: List[Any]) -> Dict[str, Any]:
+    results: Dict[str, List[Any]] = {"processed": [], "failed": []}
+
+    for index, item in enumerate(items):
         try:
-            return [f for f in os.listdir(self.target_dir) if f.endswith(extension)]
-        except FileNotFoundError:
-            self.logger.error(f'directory {self.target_dir} not found')
-            return []
+            valid_item = validate_input(item)
+            processed_data = {
+                "id": valid_item["id"],
+                "action": valid_item["action"].upper(),
+                "status": "completed",
+            }
+            results["processed"].append(processed_data)
+        except ValidationError as err:
+            results["failed"].append({"index": index, "error": str(err)})
 
-    def cleanup_old_files(self, limit: int = 10) -> int:
-        files = sorted(
-            [os.path.join(self.target_dir, f) for f in self.list_files()],
-            key=os.path.getmtime
-        )
-        
-        removed_count = 0
-        if len(files) > limit:
-            for file_path in files[:-limit]:
-                os.remove(file_path)
-                removed_count += 1
-        return removed_count
-
-def run_automation(path: str) -> None:
-    engine = AutomationEngine(path)
-    count = engine.cleanup_old_files()
-    print(f'successfully removed {count} files')
+    return results
