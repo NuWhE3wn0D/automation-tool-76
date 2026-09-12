@@ -2,26 +2,28 @@ from typing import Optional
 
 class AutomationError(Exception):
     """Base exception for automation-tool-76."""
-    def __init__(self, message: str, code: Optional[int] = None) -> None:
-        super().__init__(message)
-        self.code = code
+    pass
 
 class ConfigurationError(AutomationError):
-    """Raised when tool configuration is invalid."""
+    """Raised when configuration settings are invalid."""
+    def __init__(self, message: str, field: Optional[str] = None) -> None:
+        self.field = field
+        super().__init__(f"{message} (field: {field})" if field else message)
 
 class ExecutionError(AutomationError):
-    """Raised during automation process failures."""
+    """Raised when a process execution fails."""
+    def __init__(self, message: str, exit_code: int) -> None:
+        self.exit_code = exit_code
+        super().__init__(f"{message} with exit code {exit_code}")
 
 class ValidationError(AutomationError):
-    """Raised when input validation fails."""
+    """Raised when data validation fails."""
+    def __init__(self, message: str, data: any = None) -> None:
+        self.data = data
+        super().__init__(message)
 
-def format_error(exc: AutomationError) -> str:
-    """Returns formatted string representation of an error."""
-    code_str = f" [{exc.code}]" if exc.code else ""
-    return f"Error{code_str}: {str(exc)}"
-
-class ConnectionTimeout(ExecutionError):
-    """Raised on external service timeouts."""
-
-class ResourceNotFoundError(AutomationError):
-    """Raised when a required resource is missing."""
+class TimeoutError(AutomationError):
+    """Raised when an operation exceeds time limits."""
+    def __init__(self, message: str, timeout: float) -> None:
+        self.timeout = timeout
+        super().__init__(f"{message} after {timeout} seconds")
