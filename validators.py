@@ -1,31 +1,31 @@
-import functools
-import re
-from typing import Any, Callable, Dict
+import os
+from urllib.parse import urlparse
 
-_CACHE: Dict[str, Any] = {}
-_EMAIL_REGEX = re.compile(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$')
-
-
-def memoize_validator(func: Callable) -> Callable:
-    @functools.wraps(func)
-    def wrapper(*args: Any) -> Any:
-        key = f"{func.__name__}:{args}"
-        if key not in _CACHE:
-            _CACHE[key] = func(*args)
-        return _CACHE[key]
-    return wrapper
-
-
-@memoize_validator
-def validate_email_format(email: str) -> bool:
-    if not isinstance(email, str):
+def validate_url(url: str) -> bool:
+    if not isinstance(url, str) or not url.strip():
         return False
-    return bool(_EMAIL_REGEX.match(email))
+    try:
+        parsed = urlparse(url.strip())
+        return all([parsed.scheme in ('http', 'https'), parsed.netloc])
+    except (ValueError, AttributeError):
+        return False
 
+def validate_safe_path(base_dir: str, target_path: str) -> bool:
+    if not isinstance(base_dir, str) or not isinstance(target_path, str):
+        return False
+    try:
+        absolute_base = os.path.abspath(base_dir)
+        absolute_target = os.path.abspath(os.path.join(base_dir, target_path))
+        return absolute_target.startswith(absolute_base)
+    except (ValueError, OSError):
+        return False
 
-def batch_validate_emails(emails: list[str]) -> list[bool]:
-    return [validate_email_format(e) for e in emails]
-
-
-def clear_validation_cache() -> None:
-    _CACHE.clear()
+def validate_config_dict(config: dict, schema: dict) -> bool:
+    if not isinstance(config, dict) or not isinstance(schema, dict):
+        return False
+    for key, expected_type in schema.items():
+        if key not in config:
+            return False
+        if not isinstance(config[key], expected_type):
+            return False
+    return True
