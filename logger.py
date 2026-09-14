@@ -2,28 +2,31 @@ import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-LOG_FILE = Path("automation-tool-76.log")
-MAX_BYTES = 5 * 1024 * 1024
-BACKUP_COUNT = 3
+LOG_DIR = Path("logs")
+LOG_FILE = LOG_DIR / "automation.log"
 
-def setup_logger(name: str = "automation-tool") -> logging.Logger:
+def setup_logger(name: str = "automation-tool-76") -> logging.Logger:
+    LOG_DIR.mkdir(exist_ok=True)
+    
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
-
+    
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
-
-    handler = RotatingFileHandler(
-        LOG_FILE, 
-        maxBytes=MAX_BYTES, 
-        backup_count=BACKUP_COUNT
+    
+    file_handler = RotatingFileHandler(
+        LOG_FILE,
+        maxBytes=5 * 1024 * 1024,
+        backupCount=3
     )
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-
+    file_handler.setFormatter(formatter)
+    
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
-
+    
+    if not logger.handlers:
+        logger.addHandler(file_handler)
+        logger.addHandler(console_handler)
+        
     return logger
