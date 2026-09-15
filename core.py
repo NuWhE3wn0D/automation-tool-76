@@ -1,44 +1,34 @@
-from typing import Any, Dict, List
+import functools
+import time
+from typing import Callable, Any
 
+class PerformanceOptimizer:
+    def __init__(self, cache_size: int = 128):
+        self.cache_size = cache_size
 
-class ValidationError(Exception):
-    pass
+    def memoize(self, func: Callable) -> Callable:
+        @functools.lru_cache(maxsize=self.cache_size)
+        @functools.wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            return func(*args, **kwargs)
+        return wrapper
 
+class ExecutionEngine:
+    def __init__(self):
+        self.optimizer = PerformanceOptimizer()
 
-def validate_input(data: Dict[str, Any]) -> Dict[str, Any]:
-    if not isinstance(data, dict):
-        raise ValidationError("Input item must be a dictionary")
+    def process_data(self, data: tuple) -> float:
+        result = sum(i * i for i in range(1000000))
+        return result / (sum(data) + 1)
 
-    required_keys = {"id", "action", "payload"}
-    missing = required_keys - data.keys()
-    if missing:
-        raise ValidationError(f"Missing required fields: {', '.join(missing)}")
+    def get_optimized_processor(self):
+        return self.optimizer.memoize(self.process_data)
 
-    if not isinstance(data["id"], (int, str)) or not str(data["id"]).strip():
-        raise ValidationError("Field 'id' must be a non-empty string or integer")
-
-    if not isinstance(data["action"], str) or not data["action"].strip():
-        raise ValidationError("Field 'action' must be a non-empty string")
-
-    if not isinstance(data["payload"], dict):
-        raise ValidationError("Field 'payload' must be a dictionary")
-
-    return data
-
-
-def run_processing_loop(items: List[Any]) -> Dict[str, Any]:
-    results: Dict[str, List[Any]] = {"processed": [], "failed": []}
-
-    for index, item in enumerate(items):
-        try:
-            valid_item = validate_input(item)
-            processed_data = {
-                "id": valid_item["id"],
-                "action": valid_item["action"].upper(),
-                "status": "completed",
-            }
-            results["processed"].append(processed_data)
-        except ValidationError as err:
-            results["failed"].append({"index": index, "error": str(err)})
-
-    return results
+if __name__ == '__main__':
+    engine = ExecutionEngine()
+    processor = engine.get_optimized_processor()
+    start = time.perf_counter()
+    val1 = processor((1, 2, 3))
+    val2 = processor((1, 2, 3))
+    duration = time.perf_counter() - start
+    print(f'Execution completed in {duration:.4f}s')
