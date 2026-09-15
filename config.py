@@ -1,45 +1,30 @@
-import os
 import json
+import os
 from typing import Any, Dict
 
-DEFAULT_CONFIG: Dict[str, Any] = {
-    "host": "127.0.0.1",
-    "port": 8080,
-    "debug": False,
-    "timeout": 30,
-    "retry_limit": 3,
-    "output_dir": "./output"
-}
-
 class ConfigLoader:
-    def __init__(self, config_path: str = "config.json") -> None:
-        self.config_path = config_path
-        self.config = DEFAULT_CONFIG.copy()
-        self.load()
+    def __init__(self, defaults: Dict[str, Any]):
+        self._config = defaults
 
-    def load(self) -> None:
-        if os.path.exists(self.config_path):
-            try:
-                with open(self.config_path, "r", encoding="utf-8") as f:
-                    file_config = json.load(f)
-                    self.config.update(file_config)
-            except (json.JSONDecodeError, OSError):
-                pass
-        self._apply_env_overrides()
-
-    def _apply_env_overrides(self) -> None:
-        for key, default_val in DEFAULT_CONFIG.items():
-            env_key = f"APP_{key.upper()}"
-            if env_key in os.environ:
-                env_val = os.environ[env_key]
-                val_type = type(default_val)
-                try:
-                    if val_type is bool:
-                        self.config[key] = env_val.lower() in ("true", "1", "yes", "on")
-                    else:
-                        self.config[key] = val_type(env_val)
-                except ValueError:
-                    pass
+    def load_from_file(self, filepath: str) -> None:
+        if not os.path.exists(filepath):
+            return
+        try:
+            with open(filepath, 'r') as f:
+                user_config = json.load(f)
+                self._config.update(user_config)
+        except (json.JSONDecodeError, IOError):
+            pass
 
     def get(self, key: str, default: Any = None) -> Any:
-        return self.config.get(key, default)
+        return self._config.get(key, default)
+
+def get_app_config(path: str = 'config.json') -> ConfigLoader:
+    defaults = {
+        'host': '127.0.0.1',
+        'port': 8080,
+        'debug': False
+    }
+    loader = ConfigLoader(defaults)
+    loader.load_from_file(path)
+    return loader
