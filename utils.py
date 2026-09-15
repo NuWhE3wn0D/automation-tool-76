@@ -1,41 +1,34 @@
 import os
-import json
-from datetime import datetime, timezone
+import shutil
+from typing import List, Optional
 from pathlib import Path
-from typing import Any, Dict, Optional
 
+def cleanup_temp_files(directory: str, pattern: str = "*.tmp") -> int:
+    count = 0
+    dir_path = Path(directory)
+    if not dir_path.exists():
+        return count
 
-def ensure_directory(path: str | Path) -> Path:
-    target_path = Path(path)
-    target_path.mkdir(parents=True, exist_ok=True)
-    return target_path
+    for file_path in dir_path.glob(pattern):
+        try:
+            file_path.unlink()
+            count += 1
+        except OSError:
+            continue
+    return count
 
+def organize_directory(source: str, target: str, extensions: Optional[List[str]] = None) -> None:
+    src_path = Path(source)
+    dst_path = Path(target)
+    dst_path.mkdir(parents=True, exist_ok=True)
 
-def get_timestamp() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    for item in src_path.iterdir():
+        if item.is_file():
+            if extensions is None or item.suffix.lower() in extensions:
+                shutil.move(str(item), str(dst_path / item.name))
 
+def get_directory_size(path: str) -> int:
+    return sum(f.stat().st_size for f in Path(path).rglob('*') if f.is_file())
 
-def load_json_file(file_path: str | Path) -> Dict[str, Any]:
-    path = Path(file_path)
-    if not path.exists():
-        return {}
-    try:
-        with path.open("r", encoding="utf-8") as f:
-            return json.load(f)
-    except json.JSONDecodeError:
-        return {}
-
-
-def save_json_file(file_path: str | Path, data: Dict[str, Any]) -> bool:
-    path = Path(file_path)
-    try:
-        ensure_directory(path.parent)
-        with path.open("w", encoding="utf-8") as f:
-            json.dump(data, f, indent=4, ensure_ascii=False)
-        return True
-    except (OSError, TypeError):
-        return False
-
-
-def get_env_var(key: str, default: Optional[str] = None) -> Optional[str]:
-    return os.environ.get(key, default)
+def sanitize_path(path: str) -> str:
+    return str(Path(path).expanduser().resolve())
