@@ -1,32 +1,27 @@
-import functools
-from typing import Any, Callable, Dict
+import logging
+from typing import Any, Dict
 
-CACHE: Dict[tuple, Any] = {}
+def validate_input(data: Any) -> bool:
+    if not isinstance(data, dict):
+        return False
+    required_fields = {'id', 'payload'}
+    return all(field in data for field in required_fields)
 
-def memoize(func: Callable) -> Callable:
-    @functools.wraps(func)
-    def wrapper(*args: Any, **kwargs: Any) -> Any:
-        key = (func.__name__, args, frozenset(kwargs.items()))
-        if key not in CACHE:
-            CACHE[key] = func(*args, **kwargs)
-        return CACHE[key]
-    return wrapper
+def process_loop(items: list):
+    for item in items:
+        try:
+            if not validate_input(item):
+                logging.warning(f"Invalid item skipped: {item}")
+                continue
+            
+            perform_action(item)
+        except Exception as e:
+            logging.error(f"Processing error: {e}")
 
-class DataHandler:
-    def __init__(self, data: list):
-        self._data = data
+def perform_action(data: Dict[str, Any]):
+    # Business logic implementation
+    pass
 
-    @memoize
-    def process_heavy_computation(self, factor: int) -> list:
-        return [x * factor for x in self._data]
-
-    def batch_update(self, factor: int, iterations: int) -> None:
-        for _ in range(iterations):
-            self.process_heavy_computation(factor)
-
-def clear_cache() -> None:
-    CACHE.clear()
-
-if __name__ == '__main__':
-    handler = DataHandler(list(range(1000)))
-    handler.batch_update(2, 500)
+if __name__ == "__main__":
+    data_stream = [{'id': 1, 'payload': 'test'}, 'invalid', {'id': 2}]
+    process_loop(data_stream)
