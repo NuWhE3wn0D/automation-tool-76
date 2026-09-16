@@ -1,23 +1,35 @@
-import time
-import functools
-import random
-from typing import Callable, Any
+from typing import Any, Dict, List, Set
 
-def retry(max_attempts: int = 3, delay: float = 1.0, backoff: float = 2.0):
-    def decorator(func: Callable) -> Callable:
-        @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            attempts = 0
-            current_delay = delay
-            while attempts < max_attempts:
-                try:
-                    return func(*args, **kwargs)
-                except Exception:
-                    attempts += 1
-                    if attempts == max_attempts:
-                        raise
-                    time.sleep(current_delay)
-                    current_delay *= backoff
-            return None
-        return wrapper
-    return decorator
+class ValidationError(Exception):
+    pass
+
+class InputValidator:
+    def __init__(self, allowed_actions: List[str]):
+        self.allowed_actions = set(allowed_actions)
+
+    def validate_task(self, data: Dict[str, Any]) -> None:
+        if not isinstance(data, dict):
+            raise ValidationError("Input data must be a dictionary")
+
+        required = {"id", "action", "payload"}
+        missing = required - data.keys()
+        if missing:
+            raise ValidationError(f"Missing required keys: {', '.join(missing)}")
+
+        if not isinstance(data["id"], (int, str)) or not str(data["id"]).strip():
+            raise ValidationError("Task ID must be a non-empty string or integer")
+
+        if not isinstance(data["action"], str) or data["action"] not in self.allowed_actions:
+            raise ValidationError(f"Invalid or unsupported action: {data.get('action')}")
+
+        if not isinstance(data["payload"], dict):
+            raise ValidationError("Payload must be a dictionary")
+
+    def validate_batch(self, batch: List[Dict[str, Any]]) -> None:
+        if not isinstance(batch, list):
+            raise ValidationError("Batch input must be a list of tasks")
+        for index, item in enumerate(batch):
+            try:
+                self.validate_task(item)
+            except ValidationError as e:
+                raise ValidationError(f"Validation failed at index {index}: {str(e)}")
