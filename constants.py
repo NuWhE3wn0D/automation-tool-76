@@ -1,29 +1,30 @@
-from typing import Final
+from typing import Final, Dict, Any
+import os
 
-TIMEOUT_SECONDS: Final[int] = 30
-MAX_RETRIES: Final[int] = 3
-DEFAULT_ENCODING: Final[str] = 'utf-8'
+CACHE_TTL: Final[int] = int(os.getenv('CACHE_TTL', 3600))
+BATCH_SIZE: Final[int] = 1000
+MAX_WORKERS: Final[int] = os.cpu_count() or 4
 
-LOG_LEVELS: Final[dict[str, int]] = {
-    'DEBUG': 10,
-    'INFO': 20,
-    'WARNING': 30,
-    'ERROR': 40,
-    'CRITICAL': 50,
+HTTP_TIMEOUT: Final[float] = 30.0
+RETRY_ATTEMPTS: Final[int] = 3
+
+DEFAULT_CONFIG: Final[Dict[str, Any]] = {
+    'optimization_level': 2,
+    'use_fast_math': True,
+    'memory_limit_mb': 512,
+    'concurrency_mode': 'async'
 }
 
-SUPPORTED_EXTENSIONS: Final[tuple[str, ...]] = ('.json', '.yaml', '.csv', '.txt')
+CACHE_ENABLED: Final[bool] = True
+CHUNK_SIZE: Final[int] = 4096
 
-class AppDefaults:
-    """Collection of application default configurations."""
-    API_VERSION: Final[str] = "v1.0.0"
-    MAX_WORKERS: Final[int] = 4
-    BASE_URL: Final[str] = "https://api.automation-tool-76.local"
-
-    @classmethod
-    def get_headers(cls) -> dict[str, str]:
-        """Return default request headers."""
-        return {
-            "Content-Type": "application/json",
-            "X-App-Version": cls.API_VERSION
-        }
+__all__ = [
+    'CACHE_TTL',
+    'BATCH_SIZE',
+    'MAX_WORKERS',
+    'HTTP_TIMEOUT',
+    'RETRY_ATTEMPTS',
+    'DEFAULT_CONFIG',
+    'CACHE_ENABLED',
+    'CHUNK_SIZE'
+]
