@@ -1,34 +1,35 @@
-import os
-import shutil
-from typing import List, Optional
-from pathlib import Path
+import functools
+import time
+import logging
+from typing import Callable, Type, Tuple, Any
 
-def cleanup_temp_files(directory: str, pattern: str = "*.tmp") -> int:
-    count = 0
-    dir_path = Path(directory)
-    if not dir_path.exists():
-        return count
+logger = logging.getLogger(__name__)
 
-    for file_path in dir_path.glob(pattern):
-        try:
-            file_path.unlink()
-            count += 1
-        except OSError:
-            continue
-    return count
 
-def organize_directory(source: str, target: str, extensions: Optional[List[str]] = None) -> None:
-    src_path = Path(source)
-    dst_path = Path(target)
-    dst_path.mkdir(parents=True, exist_ok=True)
-
-    for item in src_path.iterdir():
-        if item.is_file():
-            if extensions is None or item.suffix.lower() in extensions:
-                shutil.move(str(item), str(dst_path / item.name))
-
-def get_directory_size(path: str) -> int:
-    return sum(f.stat().st_size for f in Path(path).rglob('*') if f.is_file())
-
-def sanitize_path(path: str) -> str:
-    return str(Path(path).expanduser().resolve())
+def retry(
+    exceptions: Tuple[Type[BaseException], ...] = (Exception,),
+    tries: int = 3,
+    delay: float = 1.0,
+    backoff: float = 2.0,
+) -> Callable:
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            mdelay = delay
+            for attempt in range(1, tries + 1):
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as e:
+                    if attempt == tries:
+                        logger.error(
+                            f"Function {func.__name__} failed after {tries} attempts: {e}"
+                        )
+                        raise
+                    logger.warning(
+                        f"Retrying {func.__name__} in {mdelay:.2f} seconds... "
+                        f"(Attempt {attempt}/{tries}) due to {e}"
+                    )
+                    time.sleep(mdelay)
+                    mdelay *= backoff
+        return wrapper
+    return decorator
