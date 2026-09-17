@@ -1,47 +1,32 @@
 import logging
-from logging.handlers import RotatingFileHandler
-from pathlib import Path
+import sys
 from typing import Optional
 
+class AutomationLogger:
+    """Standardized logging utility for automation-tool-76."""
 
-def setup_logger(
-    name: str = "automation_tool",
-    log_dir: str = "logs",
-    log_file: str = "app.log",
-    level: int = logging.INFO,
-    max_bytes: int = 5 * 1024 * 1024,
-    backup_count: int = 5,
-    console_output: bool = True,
-) -> logging.Logger:
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
+    def __init__(self, name: str, level: int = logging.INFO) -> None:
+        self.logger = logging.getLogger(name)
+        self.logger.setLevel(level)
+        handler = logging.StreamHandler(sys.stdout)
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+        handler.setFormatter(formatter)
+        self.logger.addHandler(handler)
 
-    if logger.handlers:
-        return logger
+    def info(self, message: str) -> None:
+        """Log an informational message."""
+        self.logger.info(message)
 
-    formatter = logging.Formatter(
-        fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
+    def error(self, message: str, exc_info: Optional[Exception] = None) -> None:
+        """Log an error message with optional exception details."""
+        self.logger.error(message, exc_info=exc_info)
 
-    log_path = Path(log_dir)
-    log_path.mkdir(parents=True, exist_ok=True)
-    file_path = log_path / log_file
+    def warning(self, message: str) -> None:
+        """Log a warning message."""
+        self.logger.warning(message)
 
-    file_handler = RotatingFileHandler(
-        file_path,
-        maxBytes=max_bytes,
-        backupCount=backup_count,
-        encoding="utf-utf-8",
-    )
-    file_handler.setFormatter(formatter)
-    file_handler.setLevel(level)
-    logger.addHandler(file_handler)
-
-    if console_output:
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(formatter)
-        console_handler.setLevel(level)
-        logger.addHandler(console_handler)
-
-    return logger
+def get_logger(name: str) -> AutomationLogger:
+    """Factory function for creating logger instances."""
+    return AutomationLogger(name)
