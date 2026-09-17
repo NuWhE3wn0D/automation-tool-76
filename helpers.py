@@ -1,44 +1,53 @@
+import re
 import time
-from typing import Any, Callable, Dict, List, TypeVar
+from datetime import datetime, timezone
+from typing import Any, Callable, List, TypeVar
 
 T = TypeVar("T")
 
 
-def safe_get(data: Dict[str, Any], path: str, default: Any = None) -> Any:
-    keys = path.split(".")
-    current = data
-    for key in keys:
-        if isinstance(current, dict):
-            current = current.get(key)
+def slugify(text: str) -> str:
+    text = text.lower().strip()
+    text = re.sub(r"[^\w\s-]", "", text)
+    return re.sub(r"[-\s]+", "-", text)
+
+
+def chunk_list(items: List[T], size: int) -> List[List[T]]:
+    if size <= 0:
+        raise ValueError("Chunk size must be greater than zero")
+    return [items[i : i + size] for i in range(0, len(items), size)]
+
+
+def safe_get(data: dict, keys: str, default: Any = None) -> Any:
+    curr = data
+    for key in keys.split("."):
+        if isinstance(curr, dict) and key in curr:
+            curr = curr[key]
         else:
             return default
-        if current is None:
-            return default
-    return current
+    return curr
 
 
-def flatten_list(nested_list: List[Any]) -> List[Any]:
-    flat = []
-    for item in nested_list:
-        if isinstance(item, list):
-            flat.extend(flatten_list(item))
-        else:
-            flat.append(item)
-    return flat
+def retry_operation(
+    func: Callable[..., T],
+    retries: int = 3,
+    delay: float = 1.0,
+    backoff: float = 2.0,
+) -> T:
+    last_exception = None
+    for attempt in range(retries):
+        try:
+            return func()
+        except Exception as exc:
+            last_exception = exc
+            if attempt < retries - 1:
+                time.sleep(delay)
+                delay *= backoff
+    if last_exception:
+        raise last_exception
+    raise RuntimeError("Operation failed with no exception")
 
 
-def retry(exceptions: tuple, tries: int = 3, delay: float = 1.0) -> Callable:
-    def decorator(func: Callable[..., T]) -> Callable[..., T]:
-        def wrapper(*args: Any, **kwargs: Any) -> T:
-            attempts = 0
-            while attempts < tries:
-                try:
-                    return func(*args, **kwargs)
-                except exceptions:
-                    attempts += 1
-                    if attempts == tries:
-                        raise
-                    time.sleep(delay)
-            return func(*args, **kwargs)
-        return wrapper
-    return decorator
+def current_timestamp(iso: bool = True) -> str:
+    now = datetime.now(timezone.utc)
+    return now.isoformat() if iso else now.strftime("%Y-%m-%d %H:%M:%S")
