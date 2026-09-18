@@ -2,28 +2,24 @@ from typing import Optional
 
 class AutomationError(Exception):
     """Base exception for automation-tool-76."""
-    pass
+    def __init__(self, message: str, code: Optional[int] = None) -> None:
+        super().__init__(message)
+        self.code = code
 
 class ConfigurationError(AutomationError):
-    """Raised when configuration settings are invalid."""
-    def __init__(self, message: str, field: Optional[str] = None) -> None:
-        self.field = field
-        super().__init__(f"{message} (field: {field})" if field else message)
+    """Raised when tool configuration is invalid."""
 
-class ExecutionError(AutomationError):
-    """Raised when a process execution fails."""
-    def __init__(self, message: str, exit_code: int) -> None:
-        self.exit_code = exit_code
-        super().__init__(f"{message} with exit code {exit_code}")
+class ProcessorError(AutomationError):
+    """Raised during data processing failures."""
 
 class ValidationError(AutomationError):
-    """Raised when data validation fails."""
-    def __init__(self, message: str, data: any = None) -> None:
-        self.data = data
-        super().__init__(message)
+    """Raised when input validation fails."""
 
-class TimeoutError(AutomationError):
-    """Raised when an operation exceeds time limits."""
-    def __init__(self, message: str, timeout: float) -> None:
-        self.timeout = timeout
-        super().__init__(f"{message} after {timeout} seconds")
+class NetworkError(AutomationError):
+    """Raised during connectivity or API issues."""
+
+def format_error(error: AutomationError) -> str:
+    """Format exception details for logging."""
+    base_msg = str(error)
+    code_msg = f" (Code: {error.code})" if error.code else ""
+    return f"{type(error).__name__}: {base_msg}{code_msg}"
