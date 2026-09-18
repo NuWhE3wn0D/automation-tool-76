@@ -1,32 +1,28 @@
 import logging
-import sys
-from typing import Optional
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
-class AutomationLogger:
-    """Standardized logging utility for automation-tool-76."""
+def setup_logger(name: str, log_file: str = 'app.log') -> logging.Logger:
+    path = Path(log_file)
+    path.parent.mkdir(parents=True, exist_ok=True)
 
-    def __init__(self, name: str, level: int = logging.INFO) -> None:
-        self.logger = logging.getLogger(name)
-        self.logger.setLevel(level)
-        handler = logging.StreamHandler(sys.stdout)
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
-        handler.setFormatter(formatter)
-        self.logger.addHandler(handler)
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
 
-    def info(self, message: str) -> None:
-        """Log an informational message."""
-        self.logger.info(message)
+    handler = RotatingFileHandler(
+        log_file,
+        maxBytes=5 * 1024 * 1024,
+        backupCount=3
+    )
+    handler.setFormatter(formatter)
 
-    def error(self, message: str, exc_info: Optional[Exception] = None) -> None:
-        """Log an error message with optional exception details."""
-        self.logger.error(message, exc_info=exc_info)
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
+    logger.addHandler(handler)
 
-    def warning(self, message: str) -> None:
-        """Log a warning message."""
-        self.logger.warning(message)
+    console = logging.StreamHandler()
+    console.setFormatter(formatter)
+    logger.addHandler(console)
 
-def get_logger(name: str) -> AutomationLogger:
-    """Factory function for creating logger instances."""
-    return AutomationLogger(name)
+    return logger
