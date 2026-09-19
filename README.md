@@ -1,44 +1,49 @@
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 # automation-tool-76
 
-A high-performance Python-based automation framework designed to streamline repetitive task execution and workflow management. It provides a modular architecture for developers to integrate custom logic into cross-platform system operations.
+`automation-tool-76` is a lightweight Python engine designed to streamline repetitive filesystem operations and API orchestration tasks. It provides developers with a unified interface to watch directories, execute concurrent HTTP requests, and schedule recurring local scripts with minimal overhead.
 
 ## Features
 
-*   **Task Scheduling Engine:** Execute scripts on a cron-like schedule or trigger them based on real-time system events.
-*   **Modular Plugin System:** Extend core functionality by dropping custom Python modules into the `plugins/` directory without altering the core codebase.
-*   **Logging & Telemetry:** Built-in structured logging with integration for local file storage or remote monitoring via HTTP endpoints.
-*   **Concurrent Execution:** Leverages `asyncio` for non-blocking task processing, ensuring maximum resource efficiency during heavy workflows.
+* **Smart Directory Watcher:** Monitor specific paths for file creations or modifications and trigger customized data processing pipelines.
+* **Concurrent API Batching:** Dispatch bulk asynchronous HTTP requests with built-in rate-limiting, exponential backoff, and failure recovery.
+* **Declarative Task Scheduling:** Define and execute cron-like workflows directly inside your Python scripts using an intuitive decorator syntax.
 
 ## Installation
 
-Ensure you have Python 3.9 or higher installed. Clone the repository and install the dependencies:
+Install the package via pip:
 
 ```bash
-git clone https://github.com/Developer/automation-tool-76.git
-cd automation-tool-76
-pip install -r requirements.txt
+pip install automation-tool-76
 ```
 
-## Usage
+## Quick Start
 
-You can trigger a workflow by specifying the task configuration file. To run a one-time job, execute the following command:
+The following example demonstrates how to set up a scheduled directory cleanup and compress files automatically.
 
-```bash
-python main.py --config configs/default.yaml --run-now
+```python
+from automation_tool_76 import TaskRunner, FileSystem
+
+# Initialize the automation engine
+runner = TaskRunner()
+fs = FileSystem()
+
+@runner.task(interval="1h")
+def archive_old_reports():
+    # Find and compress CSV files older than 7 days
+    target_files = fs.find_files("./data", pattern="*.csv", age_days=7)
+    if target_files:
+        fs.zip_files(target_files, destination="./archives/monthly_report.zip")
+        print(f"Archived {len(target_files)} reports successfully.")
+
+if __name__ == "__main__":
+    runner.start()
 ```
-
-For continuous background execution, deploy the tool as a service using the provided Dockerfile or your system's `systemd` manager:
-
-```bash
-python main.py --daemonize
-```
-
-## Configuration
-
-Settings are managed via the `configs/` directory. Modify `settings.yaml` to define your task paths, API keys, and notification thresholds. For detailed documentation on the configuration schema, please refer to the `docs/` folder.
 
 ## License
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
 Distributed under the MIT License. See `LICENSE` for more information.
+
+---
+Developed by Developer.
