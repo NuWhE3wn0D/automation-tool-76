@@ -1,28 +1,28 @@
 import logging
-from logging.handlers import RotatingFileHandler
+import sys
 from pathlib import Path
 
-def setup_logger(name: str, log_file: str = 'app.log') -> logging.Logger:
-    path = Path(log_file)
-    path.parent.mkdir(parents=True, exist_ok=True)
+class AutomationLogger:
+    def __init__(self, name: str = "automation-tool-76", log_file: str = "app.log"):
+        self.logger = logging.getLogger(name)
+        self.logger.setLevel(logging.DEBUG)
+        self._setup_handlers(log_file)
 
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
+    def _setup_handlers(self, log_file: str) -> None:
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
 
-    handler = RotatingFileHandler(
-        log_file,
-        maxBytes=5 * 1024 * 1024,
-        backupCount=3
-    )
-    handler.setFormatter(formatter)
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setFormatter(formatter)
+        self.logger.addHandler(console_handler)
 
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
-    logger.addHandler(handler)
+        file_path = Path(log_file)
+        file_handler = logging.FileHandler(file_path)
+        file_handler.setFormatter(formatter)
+        self.logger.addHandler(file_handler)
 
-    console = logging.StreamHandler()
-    console.setFormatter(formatter)
-    logger.addHandler(console)
+    def get_logger(self) -> logging.Logger:
+        return self.logger
 
-    return logger
+logger_instance = AutomationLogger().get_logger()
