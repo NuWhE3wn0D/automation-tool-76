@@ -1,30 +1,27 @@
-import json
 import os
-from typing import Any, Dict
+from typing import Dict, Any
+from dataclasses import dataclass
 
-class ConfigLoader:
-    def __init__(self, defaults: Dict[str, Any]):
-        self._config = defaults
+@dataclass(frozen=True)
+class Config:
+    env: str = os.getenv("APP_ENV", "production")
+    debug: bool = os.getenv("DEBUG", "false").lower() == "true"
+    timeout: int = int(os.getenv("TIMEOUT", 30))
 
-    def load_from_file(self, filepath: str) -> None:
-        if not os.path.exists(filepath):
-            return
-        try:
-            with open(filepath, 'r') as f:
-                user_config = json.load(f)
-                self._config.update(user_config)
-        except (json.JSONDecodeError, IOError):
-            pass
+def load_configuration() -> Config:
+    return Config()
 
-    def get(self, key: str, default: Any = None) -> Any:
-        return self._config.get(key, default)
-
-def get_app_config(path: str = 'config.json') -> ConfigLoader:
-    defaults = {
-        'host': '127.0.0.1',
-        'port': 8080,
-        'debug': False
+class Settings:
+    _settings: Dict[str, Any] = {
+        "version": "1.0.0",
+        "retries": 3,
+        "base_path": "/var/lib/automation"
     }
-    loader = ConfigLoader(defaults)
-    loader.load_from_file(path)
-    return loader
+
+    @classmethod
+    def get(cls, key: str, default: Any = None) -> Any:
+        return cls._settings.get(key, default)
+
+def validate_env() -> bool:
+    required = ["APP_ENV"]
+    return all(os.getenv(var) for var in required)
