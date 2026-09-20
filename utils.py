@@ -1,20 +1,28 @@
 import time
-import functools
-from typing import Callable, Any, Type
+from functools import wraps
+from typing import Callable, Tuple, Type, Any
 
-def retry(exceptions: tuple[Type[Exception], ...] = (Exception,), 
-          retries: int = 3, 
-          delay: float = 1.0) -> Callable:
+
+def retry(
+    exceptions: Tuple[Type[BaseException], ...] = (Exception,),
+    tries: int = 3,
+    delay: float = 1.0,
+    backoff: float = 2.0,
+) -> Callable:
     def decorator(func: Callable) -> Callable:
-        @functools.wraps(func)
+        @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
-            last_exception = None
-            for _ in range(retries):
+            attempt_tries = tries
+            attempt_delay = delay
+            while attempt_tries > 0:
                 try:
                     return func(*args, **kwargs)
                 except exceptions as e:
-                    last_exception = e
-                    time.sleep(delay)
-            raise last_exception
+                    attempt_tries -= 1
+                    if attempt_tries == 0:
+                        raise e
+                    time.sleep(attempt_delay)
+                    attempt_delay *= backoff
+            return func(*args, **kwargs)
         return wrapper
     return decorator
