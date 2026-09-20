@@ -1,27 +1,31 @@
+import json
 import os
-from typing import Dict, Any
-from dataclasses import dataclass
+from typing import Any, Dict
 
-@dataclass(frozen=True)
-class Config:
-    env: str = os.getenv("APP_ENV", "production")
-    debug: bool = os.getenv("DEBUG", "false").lower() == "true"
-    timeout: int = int(os.getenv("TIMEOUT", 30))
+DEFAULTS = {
+    "host": "localhost",
+    "port": 8080,
+    "debug": False
+}
 
-def load_configuration() -> Config:
-    return Config()
+def load_config(path: str) -> Dict[str, Any]:
+    config = DEFAULTS.copy()
+    if os.path.exists(path):
+        try:
+            with open(path, 'r') as f:
+                user_config = json.load(f)
+                config.update(user_config)
+        except (json.JSONDecodeError, IOError):
+            pass
+    return config
 
-class Settings:
-    _settings: Dict[str, Any] = {
-        "version": "1.0.0",
-        "retries": 3,
-        "base_path": "/var/lib/automation"
-    }
+class ConfigManager:
+    def __init__(self, path: str = "config.json"):
+        self._config = load_config(path)
 
-    @classmethod
-    def get(cls, key: str, default: Any = None) -> Any:
-        return cls._settings.get(key, default)
+    def get(self, key: str, default: Any = None) -> Any:
+        return self._config.get(key, default)
 
-def validate_env() -> bool:
-    required = ["APP_ENV"]
-    return all(os.getenv(var) for var in required)
+    @property
+    def all(self) -> Dict[str, Any]:
+        return self._config.copy()
