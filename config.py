@@ -1,54 +1,34 @@
 import json
 import os
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
+DEFAULT_CONFIG: Dict[str, Any] = {
+    "timeout": 30,
+    "retries": 3,
+    "debug": False,
+    "log_level": "INFO",
+    "output_dir": "./output"
+}
 
-class Config:
-    DEFAULT_CONFIG = {
-        "host": "127.0.0.1",
-        "port": 8080,
-        "debug": False,
-        "timeout": 30,
-        "retry_limit": 3,
-    }
+class ConfigLoader:
+    def __init__(self, config_path: Optional[str] = None) -> None:
+        self.config_path = config_path
+        self.config = DEFAULT_CONFIG.copy()
+        if self.config_path:
+            self.load()
 
-    def __init__(self, config_path: str | None = None) -> None:
-        self._config: Dict[str, Any] = self.DEFAULT_CONFIG.copy()
-        if config_path:
-            self.load_from_file(config_path)
-        self._load_from_env()
+    def load(self) -> Dict[str, Any]:
+        if not self.config_path or not os.path.exists(self.config_path):
+            return self.config
 
-    def load_from_file(self, path: str) -> None:
-        if not os.path.exists(path):
-            return
         try:
-            with open(path, "r", encoding="utf-8") as f:
-                file_data = json.load(f)
-                if isinstance(file_data, dict):
-                    self._config.update(file_data)
+            with open(self.config_path, "r", encoding="utf-8") as f:
+                user_config = json.load(f)
+                if isinstance(user_config, dict):
+                    self.config.update(user_config)
         except (json.JSONDecodeError, OSError):
             pass
-
-    def _load_from_env(self) -> None:
-        for key in self._config:
-            env_key = f"APP_{key.upper()}"
-            if env_key in os.environ:
-                val = os.environ[env_key]
-                self._config[key] = self._cast_value(val, type(self._config[key]))
-
-    @staticmethod
-    def _cast_value(value: str, target_type: type) -> Any:
-        if target_type is bool:
-            return value.lower() in ("true", "1", "yes")
-        try:
-            return target_type(value)
-        except ValueError:
-            return value
+        return self.config
 
     def get(self, key: str, default: Any = None) -> Any:
-        return self._config.get(key, default)
-
-    def __getattr__(self, name: str) -> Any:
-        if name in self._config:
-            return self._config[name]
-        raise AttributeError(f"'Config' object has no attribute '{name}'")
+        return self.config.get(key, default)
