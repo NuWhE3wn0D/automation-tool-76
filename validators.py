@@ -1,26 +1,24 @@
 import re
+from typing import Any, Optional
 
-REQUIRED_KEYS = {'id', 'payload', 'timestamp'}
+def validate_email(email: str) -> bool:
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return bool(re.match(pattern, email))
 
+def validate_range(value: int, min_val: int, max_val: int) -> bool:
+    return min_val <= value <= max_val
 
-def validate_input(data: dict) -> bool:
-    if not isinstance(data, dict):
-        return False
+def validate_non_empty_string(value: Any) -> bool:
+    return isinstance(value, str) and len(value.strip()) > 0
 
-    if not REQUIRED_KEYS.issubset(data.keys()):
-        return False
+def validate_uuid(uuid_str: str) -> bool:
+    pattern = r'^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+    return bool(re.match(pattern, uuid_str, re.IGNORECASE))
 
-    if not isinstance(data['id'], int):
-        return False
+def ensure_list(value: Any) -> list:
+    if value is None:
+        return []
+    return value if isinstance(value, list) else [value]
 
-    if not isinstance(data['payload'], str) or len(data['payload']) == 0:
-        return False
-
-    if not isinstance(data['timestamp'], (int, float)):
-        return False
-
-    return True
-
-
-def sanitize_payload(payload: str) -> str:
-    return re.sub(r'[^a-zA-Z0-9 ]', '', payload).strip()
+def sanitize_input(value: str) -> str:
+    return value.strip().replace('\\', '').replace(';', '')
