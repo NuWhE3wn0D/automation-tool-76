@@ -1,34 +1,19 @@
+import time
 import functools
-from typing import Any, Callable, Dict
+from typing import Callable, Any, Type, Tuple
 
-_memoized_cache: Dict[tuple, Any] = {}
-
-class Validator:
-    @staticmethod
-    @functools.lru_cache(maxsize=128)
-    def validate_schema(schema_id: str, data: tuple) -> bool:
-        if not schema_id or not data:
-            return False
-        return True
-
-    @classmethod
-    def fast_check(cls, func: Callable) -> Callable:
+def retry(exceptions: Tuple[Type[Exception], ...], tries: int = 3, delay: float = 1.0) -> Callable:
+    def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            cache_key = (func.__name__, args, frozenset(kwargs.items()))
-            if cache_key in _memoized_cache:
-                return _memoized_cache[cache_key]
-            result = func(*args, **kwargs)
-            _memoized_cache[cache_key] = result
-            return result
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            last_exception = None
+            for attempt in range(tries):
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as e:
+                    last_exception = e
+                    if attempt < tries - 1:
+                        time.sleep(delay)
+            raise last_exception
         return wrapper
-
-def batch_process(items: list, validator: Callable) -> list:
-    return [item for item in items if validator(item)]
-
-if __name__ == "__main__":
-    @Validator.fast_check
-    def expensive_check(n: int) -> bool:
-        return n % 2 == 0
-    
-    print(batch_process(list(range(10)), expensive_check))
+    return decorator
