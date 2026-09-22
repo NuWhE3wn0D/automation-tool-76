@@ -1,19 +1,26 @@
-import time
-import functools
-from typing import Callable, Any, Type, Tuple
+import re
 
-def retry(exceptions: Tuple[Type[Exception], ...], tries: int = 3, delay: float = 1.0) -> Callable:
-    def decorator(func: Callable) -> Callable:
-        @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            last_exception = None
-            for attempt in range(tries):
-                try:
-                    return func(*args, **kwargs)
-                except exceptions as e:
-                    last_exception = e
-                    if attempt < tries - 1:
-                        time.sleep(delay)
-            raise last_exception
-        return wrapper
-    return decorator
+REQUIRED_KEYS = {'id', 'payload', 'timestamp'}
+
+
+def validate_input(data: dict) -> bool:
+    if not isinstance(data, dict):
+        return False
+
+    if not REQUIRED_KEYS.issubset(data.keys()):
+        return False
+
+    if not isinstance(data['id'], int):
+        return False
+
+    if not isinstance(data['payload'], str) or len(data['payload']) == 0:
+        return False
+
+    if not isinstance(data['timestamp'], (int, float)):
+        return False
+
+    return True
+
+
+def sanitize_payload(payload: str) -> str:
+    return re.sub(r'[^a-zA-Z0-9 ]', '', payload).strip()
