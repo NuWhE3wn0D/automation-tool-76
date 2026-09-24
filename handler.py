@@ -1,27 +1,33 @@
 import logging
-from typing import Any, Dict
 
-def validate_input(data: Any) -> bool:
-    if not isinstance(data, dict):
-        return False
-    required_fields = {'id', 'payload'}
-    return all(field in data for field in required_fields)
+class DataHandler:
+    def __init__(self):
+        self.logger = logging.getLogger(__name__)
 
-def process_loop(items: list):
-    for item in items:
-        try:
-            if not validate_input(item):
-                logging.warning(f"Invalid item skipped: {item}")
-                continue
-            
-            perform_action(item)
-        except Exception as e:
-            logging.error(f"Processing error: {e}")
+    def validate_input(self, data: dict) -> bool:
+        required_fields = {'id', 'payload', 'timestamp'}
+        if not all(field in data for field in required_fields):
+            return False
+        if not isinstance(data['id'], int) or data['id'] < 0:
+            return False
+        return True
 
-def perform_action(data: Dict[str, Any]):
-    # Business logic implementation
-    pass
+    def process_stream(self, data_stream: list):
+        for entry in data_stream:
+            try:
+                if not self.validate_input(entry):
+                    self.logger.warning(f"Invalid data packet: {entry}")
+                    continue
+                
+                self._execute_task(entry)
+            except Exception as e:
+                self.logger.error(f"Processing failure: {e}")
+
+    def _execute_task(self, data: dict):
+        # core logic execution placeholder
+        pass
 
 if __name__ == "__main__":
-    data_stream = [{'id': 1, 'payload': 'test'}, 'invalid', {'id': 2}]
-    process_loop(data_stream)
+    handler = DataHandler()
+    stream = [{'id': 1, 'payload': 'test', 'timestamp': 12345}, {'id': -1}]
+    handler.process_stream(stream)
