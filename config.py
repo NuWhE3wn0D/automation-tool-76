@@ -1,34 +1,37 @@
-import json
 import os
+import logging
 from typing import Any, Dict
 
-DEFAULTS = {
-    "timeout": 30,
-    "retries": 3,
-    "log_level": "INFO"
-}
+logger = logging.getLogger(__name__)
 
-class ConfigLoader:
-    def __init__(self, filepath: str = "config.json"):
-        self.filepath = filepath
-        self.data = self._load()
+class ConfigError(Exception):
+    pass
 
-    def _load(self) -> Dict[str, Any]:
-        if not os.path.exists(self.filepath):
-            return DEFAULTS
-        try:
-            with open(self.filepath, "r") as f:
-                user_config = json.load(f)
-            return {**DEFAULTS, **user_config}
-        except (json.JSONDecodeError, IOError):
-            return DEFAULTS
+def load_config(path: str) -> Dict[str, Any]:
+    if not os.path.exists(path):
+        raise ConfigError(f"missing config file: {path}")
+    
+    try:
+        with open(path, 'r') as f:
+            data = f.read().strip()
+            if not data:
+                raise ConfigError("config file is empty")
+            
+            import json
+            config = json.loads(data)
+            
+            if not isinstance(config, dict):
+                raise ConfigError("invalid config structure: expected dict")
+            
+            return config
+    except json.JSONDecodeError as e:
+        raise ConfigError(f"malformed json: {e.msg}") from e
+    except Exception as e:
+        logger.error(f"unexpected failure: {e}")
+        raise ConfigError("critical configuration read failure") from e
 
-    def get(self, key: str, default: Any = None) -> Any:
-        return self.data.get(key, default)
-
-    def __getitem__(self, key: str) -> Any:
-        return self.data[key]
-
-    @property
-    def all(self) -> Dict[str, Any]:
-        return self.data.copy()
+def get_setting(config: Dict[str, Any], key: str, default: Any = None) -> Any:
+    try:
+        return config.get(key, default)
+    except AttributeError:
+        return default
