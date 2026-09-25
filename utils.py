@@ -1,22 +1,40 @@
-import time
-import functools
-from typing import Callable, Any, Type, Tuple
+import logging
+from typing import Any, Optional
 
-def retry(exceptions: Tuple[Type[Exception], ...] = (Exception,), 
-          tries: int = 3, 
-          delay: float = 1.0, 
-          backoff: float = 2.0) -> Callable:
-    def decorator(func: Callable) -> Callable:
-        @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            mtries, mdelay = tries, delay
-            while mtries > 1:
-                try:
-                    return func(*args, **kwargs)
-                except exceptions:
-                    time.sleep(mdelay)
-                    mtries -= 1
-                    mdelay *= backoff
-            return func(*args, **kwargs)
-        return wrapper
-    return decorator
+logger = logging.getLogger(__name__)
+
+class AutomationError(Exception):
+    """Base exception for automation-tool-76."""
+
+def safe_execute(func: callable, *args: Any, **kwargs: Any) -> Optional[Any]:
+    """Execute function with robust edge case handling."""
+    try:
+        if not callable(func):
+            raise ValueError("Provided target is not callable")
+        return func(*args, **kwargs)
+    except (TypeError, ValueError) as e:
+        logger.error(f"Input validation error in {func.__name__}: {e}")
+    except Exception as e:
+        logger.exception(f"Unexpected runtime error in {func.__name__}: {e}")
+    return None
+
+def validate_payload(data: Any, expected_keys: list[str]) -> bool:
+    """
+    Strict validation of input structures.
+    Returns True if dictionary contains all expected keys.
+    """
+    if not isinstance(data, dict):
+        return False
+    return all(key in data for key in expected_keys)
+
+def get_nested(data: dict, keys: list[str], default: Any = None) -> Any:
+    """
+    Safe dictionary traversal for nested configuration access.
+    """
+    current = data
+    try:
+        for key in keys:
+            current = current[key]
+        return current
+    except (KeyError, TypeError):
+        return default
