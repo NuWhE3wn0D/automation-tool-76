@@ -1,33 +1,35 @@
-import logging
+import json
+from typing import Any, Dict, Optional
+from pathlib import Path
 
 class DataHandler:
-    def __init__(self):
-        self.logger = logging.getLogger(__name__)
+    def __init__(self, filepath: str):
+        self.path = Path(filepath)
 
-    def validate_input(self, data: dict) -> bool:
-        required_fields = {'id', 'payload', 'timestamp'}
-        if not all(field in data for field in required_fields):
-            return False
-        if not isinstance(data['id'], int) or data['id'] < 0:
-            return False
-        return True
+    def read(self) -> Dict[str, Any]:
+        if not self.path.exists():
+            return {}
+        with open(self.path, 'r', encoding='utf-8') as f:
+            return json.load(f)
 
-    def process_stream(self, data_stream: list):
-        for entry in data_stream:
-            try:
-                if not self.validate_input(entry):
-                    self.logger.warning(f"Invalid data packet: {entry}")
-                    continue
-                
-                self._execute_task(entry)
-            except Exception as e:
-                self.logger.error(f"Processing failure: {e}")
+    def write(self, data: Dict[str, Any]) -> None:
+        with open(self.path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4)
 
-    def _execute_task(self, data: dict):
-        # core logic execution placeholder
-        pass
+    def update_key(self, key: str, value: Any) -> None:
+        data = self.read()
+        data[key] = value
+        self.write(data)
 
-if __name__ == "__main__":
-    handler = DataHandler()
-    stream = [{'id': 1, 'payload': 'test', 'timestamp': 12345}, {'id': -1}]
-    handler.process_stream(stream)
+    def clear(self) -> None:
+        if self.path.exists():
+            self.path.unlink()
+
+def sanitize_data(data: Any) -> Any:
+    if isinstance(data, dict):
+        return {k: sanitize_data(v) for k, v in data.items()}
+    if isinstance(data, list):
+        return [sanitize_data(i) for i in data]
+    if isinstance(data, str):
+        return data.strip()
+    return data
