@@ -1,24 +1,33 @@
-import re
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
-def validate_email(email: str) -> bool:
-    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-    return bool(re.match(pattern, email))
 
-def validate_range(value: int, min_val: int, max_val: int) -> bool:
-    return min_val <= value <= max_val
+def validate_port(port: Any) -> int:
+    """Validate that the provided port is within the valid range."""
+    try:
+        val = int(port)
+        if 1 <= val <= 65535:
+            return val
+    except (ValueError, TypeError):
+        pass
+    raise ValueError(f"Invalid port number: {port}")
 
-def validate_non_empty_string(value: Any) -> bool:
-    return isinstance(value, str) and len(value.strip()) > 0
 
-def validate_uuid(uuid_str: str) -> bool:
-    pattern = r'^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
-    return bool(re.match(pattern, uuid_str, re.IGNORECASE))
+def validate_email(email: Any) -> str:
+    """Check if the input string follows a basic email format."""
+    if isinstance(email, str) and "@" in email and "." in email:
+        return email
+    raise ValueError(f"Invalid email format: {email}")
 
-def ensure_list(value: Any) -> list:
-    if value is None:
-        return []
-    return value if isinstance(value, list) else [value]
 
-def sanitize_input(value: str) -> str:
-    return value.strip().replace('\\', '').replace(';', '')
+def check_non_empty(value: Optional[str]) -> str:
+    """Ensure the provided string is not null or empty after stripping."""
+    if value and isinstance(value, str) and value.strip():
+        return value.strip()
+    raise ValueError("Value cannot be empty")
+
+
+def validate_timeout(timeout: Union[int, float]) -> float:
+    """Verify that timeout is a positive numeric value."""
+    if isinstance(timeout, (int, float)) and timeout >= 0:
+        return float(timeout)
+    raise ValueError(f"Invalid timeout value: {timeout}")
