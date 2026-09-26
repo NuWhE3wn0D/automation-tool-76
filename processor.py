@@ -1,55 +1,48 @@
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
-logger = logging.getLogger(__name__)
-
-
-class ProcessingError(Exception):
-    pass
+logger = logging.getLogger("automation_tool.processor")
 
 
-class Processor:
-    def __init__(self, allowed_actions: List[str] = None):
-        self.allowed_actions = allowed_actions or ["read", "write", "delete"]
+def validate_payload(payload: Dict[str, Any]) -> Tuple[bool, str]:
+    if not isinstance(payload, dict):
+        return False, "Payload must be a dictionary"
 
-    def validate_payload(self, data: Any) -> Dict[str, Any]:
-        if not isinstance(data, dict):
-            raise TypeError("Payload must be a dictionary")
+    required_keys = {"task_id", "action", "priority"}
+    missing_keys = required_keys - payload.keys()
+    if missing_keys:
+        return False, f"Missing required keys: {', '.join(missing_keys)}"
 
-        task_id = data.get("task_id")
-        if not isinstance(task_id, int) or task_id <= 0:
-            raise ValueError("Invalid task_id: must be a positive integer")
+    if not isinstance(payload["task_id"], (int, str)):
+        return False, "task_id must be an integer or string"
 
-        action = data.get("action")
-        if action not in self.allowed_actions:
-            raise ValueError(f"Invalid action: '{action}'. Must be one of {self.allowed_actions}")
+    if not isinstance(payload["action"], str) or not payload["action"].strip():
+        return False, "action must be a non-empty string"
 
-        payload = data.get("payload")
-        if payload is None:
-            raise ValueError("Payload data cannot be missing or None")
+    priority = payload["priority"]
+    if not isinstance(priority, int) or not (1 <= priority <= 5):
+        return False, "priority must be an integer between 1 and 5"
 
-        return {
+    return True, ""
+
+
+def process_queue(payloads: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    processed_results = []
+    for index, payload in enumerate(payloads):
+        is_valid, error_msg = validate_payload(payload)
+        if not is_valid:
+            logger.error(f"Validation failed at index {index}: {error_msg}")
+            continue
+
+        task_id = payload["task_id"]
+        action = payload["action"].strip().lower()
+        priority = payload["priority"]
+
+        processed_results.append({
             "task_id": task_id,
-            "action": action,
-            "payload": payload
-        }
+            "status": "success",
+            "action_executed": action,
+            "priority_level": priority
+        })
 
-    def process_batch(self, batch: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        results = []
-        for raw_item in batch:
-            try:
-                validated = self.validate_payload(raw_item)
-                results.append({
-                    "task_id": validated["task_id"],
-                    "status": "success",
-                    "result": f"Executed {validated['action']}"
-                })
-            except (TypeError, ValueError) as err:
-                logger.warning("Skipping invalid task: %s", str(err))
-                item_id = raw_item.get("task_id") if isinstance(raw_item, dict) else None
-                results.append({
-                    "task_id": item_id,
-                    "status": "failed",
-                    "error": str(err)
-                })
-        return results
+    return processed_results
