@@ -1,34 +1,21 @@
 import time
-import random
-import logging
-from functools import wraps
-from typing import Callable, Any, Tuple, Type
+import functools
+import requests
+from typing import Callable, Any, Type
 
-logger = logging.getLogger(__name__)
-
-
-def retry(
-    retries: int = 3,
-    backoff_in_seconds: float = 1.0,
-    exceptions: Tuple[Type[BaseException], ...] = (Exception,),
-) -> Callable:
-    def decorator(func: Callable) -> Callable:
-        @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            attempt = 0
-            while attempt < retries:
+def retry_network_op(exceptions: tuple[Type[Exception], ...] = (requests.RequestException,), 
+                     max_retries: int = 3, 
+                     backoff: float = 1.0):
+    def decorator(func: Callable):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs) -> Any:
+            last_exception = None
+            for attempt in range(max_retries):
                 try:
                     return func(*args, **kwargs)
                 except exceptions as e:
-                    attempt += 1
-                    if attempt >= retries:
-                        logger.error(f"Failed after {retries} attempts: {e}")
-                        raise
-                    sleep_time = (backoff_in_seconds * (2 ** (attempt - 1))) + random.uniform(0, 0.1)
-                    logger.warning(
-                        f"Retrying {func.__name__} in {sleep_time:.2f} seconds "
-                        f"due to: {e} (Attempt {attempt}/{retries})"
-                    )
-                    time.sleep(sleep_time)
+                    last_exception = e
+                    time.sleep(backoff * (2 ** attempt))
+            raise last_exception
         return wrapper
     return decorator
