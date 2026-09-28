@@ -1,21 +1,19 @@
 import time
 import functools
-import requests
-from typing import Callable, Any, Type
+from typing import Callable, Any
 
-def retry_network_op(exceptions: tuple[Type[Exception], ...] = (requests.RequestException,), 
-                     max_retries: int = 3, 
-                     backoff: float = 1.0):
-    def decorator(func: Callable):
+def retry(max_attempts: int = 3, delay: float = 1.0, exceptions: tuple = (Exception,)):
+    def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> Any:
-            last_exception = None
-            for attempt in range(max_retries):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            attempts = 0
+            while attempts < max_attempts:
                 try:
                     return func(*args, **kwargs)
-                except exceptions as e:
-                    last_exception = e
-                    time.sleep(backoff * (2 ** attempt))
-            raise last_exception
+                except exceptions:
+                    attempts += 1
+                    if attempts == max_attempts:
+                        raise
+                    time.sleep(delay)
         return wrapper
     return decorator
