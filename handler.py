@@ -1,35 +1,33 @@
-import json
-from typing import Any, Dict, Optional
-from pathlib import Path
+import logging
+from typing import Any, Dict
 
-class DataHandler:
-    def __init__(self, filepath: str):
-        self.path = Path(filepath)
+logger = logging.getLogger(__name__)
 
-    def read(self) -> Dict[str, Any]:
-        if not self.path.exists():
-            return {}
-        with open(self.path, 'r', encoding='utf-8') as f:
-            return json.load(f)
+class AutomationHandler:
+    def __init__(self, config: Dict[str, Any]):
+        self.config = config
+        self.active = True
 
-    def write(self, data: Dict[str, Any]) -> None:
-        with open(self.path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=4)
+    def process_event(self, data: Dict[str, Any]) -> bool:
+        if not self.active:
+            return False
+        
+        try:
+            self._execute_logic(data)
+            return True
+        except Exception as e:
+            logger.error(f"event processing failed: {e}")
+            return False
 
-    def update_key(self, key: str, value: Any) -> None:
-        data = self.read()
-        data[key] = value
-        self.write(data)
+    def _execute_logic(self, data: Dict[str, Any]) -> None:
+        payload = data.get("payload", {})
+        for key, value in payload.items():
+            self._handle_item(key, value)
 
-    def clear(self) -> None:
-        if self.path.exists():
-            self.path.unlink()
+    def _handle_item(self, key: str, value: Any) -> None:
+        if key and value is not None:
+            logger.info(f"processing {key} with value {value}")
 
-def sanitize_data(data: Any) -> Any:
-    if isinstance(data, dict):
-        return {k: sanitize_data(v) for k, v in data.items()}
-    if isinstance(data, list):
-        return [sanitize_data(i) for i in data]
-    if isinstance(data, str):
-        return data.strip()
-    return data
+    def shutdown(self) -> None:
+        self.active = False
+        logger.info("handler shutdown complete")
