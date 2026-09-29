@@ -1,37 +1,37 @@
 import os
 import logging
-from typing import Any, Dict
-
-logger = logging.getLogger(__name__)
+from typing import Any, Optional
 
 class ConfigError(Exception):
     pass
 
-def load_config(path: str) -> Dict[str, Any]:
-    if not os.path.exists(path):
-        raise ConfigError(f"missing config file: {path}")
-    
+def get_env_variable(key: str, default: Optional[str] = None) -> str:
     try:
-        with open(path, 'r') as f:
-            data = f.read().strip()
-            if not data:
-                raise ConfigError("config file is empty")
-            
-            import json
-            config = json.loads(data)
-            
-            if not isinstance(config, dict):
-                raise ConfigError("invalid config structure: expected dict")
-            
-            return config
-    except json.JSONDecodeError as e:
-        raise ConfigError(f"malformed json: {e.msg}") from e
+        value = os.environ.get(key, default)
+        if value is None:
+            raise ConfigError(f'missing required environment variable: {key}')
+        return value
     except Exception as e:
-        logger.error(f"unexpected failure: {e}")
-        raise ConfigError("critical configuration read failure") from e
+        logging.error(f'failed to retrieve config: {key}')
+        raise ConfigError(f'config access failure for {key}') from e
 
-def get_setting(config: Dict[str, Any], key: str, default: Any = None) -> Any:
+class AppConfig:
+    def __init__(self) -> None:
+        self.db_url = get_env_variable('DB_URL')
+        self.timeout = int(get_env_variable('TIMEOUT', '30'))
+
+    def validate(self) -> bool:
+        if not self.db_url.startswith('postgresql://'):
+            raise ConfigError('invalid database protocol')
+        if self.timeout <= 0:
+            raise ConfigError('timeout must be a positive integer')
+        return True
+
+def load_configuration() -> AppConfig:
     try:
-        return config.get(key, default)
-    except AttributeError:
-        return default
+        config = AppConfig()
+        config.validate()
+        return config
+    except (ValueError, ConfigError) as e:
+        logging.critical(f'configuration loading aborted: {e}')
+        raise
