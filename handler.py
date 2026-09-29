@@ -1,33 +1,29 @@
+import time
+import functools
 import logging
-from typing import Any, Dict
+from typing import Callable, Any
 
 logger = logging.getLogger(__name__)
 
-class AutomationHandler:
-    def __init__(self, config: Dict[str, Any]):
-        self.config = config
-        self.active = True
+def retry(exceptions: tuple, tries: int = 3, delay: float = 1.0, backoff: float = 2.0):
+    def decorator(func: Callable):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs) -> Any:
+            current_tries, current_delay = tries, delay
+            while current_tries > 1:
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as e:
+                    logger.warning(f"{func.__name__} failed: {e}. Retrying in {current_delay}s...")
+                    time.sleep(current_delay)
+                    current_tries -= 1
+                    current_delay *= backoff
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
 
-    def process_event(self, data: Dict[str, Any]) -> bool:
-        if not self.active:
-            return False
-        
-        try:
-            self._execute_logic(data)
-            return True
-        except Exception as e:
-            logger.error(f"event processing failed: {e}")
-            return False
-
-    def _execute_logic(self, data: Dict[str, Any]) -> None:
-        payload = data.get("payload", {})
-        for key, value in payload.items():
-            self._handle_item(key, value)
-
-    def _handle_item(self, key: str, value: Any) -> None:
-        if key and value is not None:
-            logger.info(f"processing {key} with value {value}")
-
-    def shutdown(self) -> None:
-        self.active = False
-        logger.info("handler shutdown complete")
+@retry((ConnectionError, TimeoutError), tries=3, delay=2)
+def network_operation(url: str):
+    logger.info(f"connecting to {url}")
+    # Simulate network call
+    return True
