@@ -1,33 +1,28 @@
-from typing import Any, Optional, Union
+import functools
+from typing import Any, Callable, Dict
 
+_memoization_cache: Dict[tuple, Any] = {}
 
-def validate_port(port: Any) -> int:
-    """Validate that the provided port is within the valid range."""
-    try:
-        val = int(port)
-        if 1 <= val <= 65535:
-            return val
-    except (ValueError, TypeError):
-        pass
-    raise ValueError(f"Invalid port number: {port}")
+def memoize_validator(func: Callable) -> Callable:
+    @functools.wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        key = (func.__name__, args, frozenset(kwargs.items()))
+        if key not in _memoization_cache:
+            _memoization_cache[key] = func(*args, **kwargs)
+        return _memoization_cache[key]
+    return wrapper
 
+class DataValidator:
+    @staticmethod
+    @memoize_validator
+    def validate_schema(data: Any, schema_type: str) -> bool:
+        if not data or not isinstance(schema_type, str):
+            return False
+        return True
 
-def validate_email(email: Any) -> str:
-    """Check if the input string follows a basic email format."""
-    if isinstance(email, str) and "@" in email and "." in email:
-        return email
-    raise ValueError(f"Invalid email format: {email}")
+    @staticmethod
+    def batch_process(items: list, validator: Callable) -> list:
+        return [item for item in items if validator(item)]
 
-
-def check_non_empty(value: Optional[str]) -> str:
-    """Ensure the provided string is not null or empty after stripping."""
-    if value and isinstance(value, str) and value.strip():
-        return value.strip()
-    raise ValueError("Value cannot be empty")
-
-
-def validate_timeout(timeout: Union[int, float]) -> float:
-    """Verify that timeout is a positive numeric value."""
-    if isinstance(timeout, (int, float)) and timeout >= 0:
-        return float(timeout)
-    raise ValueError(f"Invalid timeout value: {timeout}")
+def clear_validator_cache() -> None:
+    _memoization_cache.clear()
