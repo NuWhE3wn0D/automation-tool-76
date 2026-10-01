@@ -1,30 +1,23 @@
-from typing import Final, Dict, Any
-import os
+from typing import Final, Dict, List
 
-CACHE_TTL: Final[int] = int(os.getenv('CACHE_TTL', 3600))
-BATCH_SIZE: Final[int] = 1000
-MAX_WORKERS: Final[int] = os.cpu_count() or 4
+TIMEOUT_SECONDS: Final[int] = 30
+MAX_RETRIES: Final[int] = 5
 
-HTTP_TIMEOUT: Final[float] = 30.0
-RETRY_ATTEMPTS: Final[int] = 3
-
-DEFAULT_CONFIG: Final[Dict[str, Any]] = {
-    'optimization_level': 2,
-    'use_fast_math': True,
-    'memory_limit_mb': 512,
-    'concurrency_mode': 'async'
+DEFAULT_HEADERS: Final[Dict[str, str]] = {
+    "Content-Type": "application/json",
+    "User-Agent": "automation-tool-76/1.0.0"
 }
 
-CACHE_ENABLED: Final[bool] = True
-CHUNK_SIZE: Final[int] = 4096
-
-__all__ = [
-    'CACHE_TTL',
-    'BATCH_SIZE',
-    'MAX_WORKERS',
-    'HTTP_TIMEOUT',
-    'RETRY_ATTEMPTS',
-    'DEFAULT_CONFIG',
-    'CACHE_ENABLED',
-    'CHUNK_SIZE'
+SUPPORTED_OPERATIONS: Final[List[str]] = [
+    "sync",
+    "validate",
+    "archive"
 ]
+
+def get_version() -> str:
+    """Return current automation-tool-76 version string."""
+    return "1.0.0"
+
+def get_retry_backoff() -> List[int]:
+    """Return predefined exponential backoff intervals in seconds."""
+    return [1, 2, 4, 8, 16]
