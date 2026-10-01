@@ -1,32 +1,32 @@
-import logging
-from typing import Any, Optional
+import functools
+from typing import Any, Callable, Dict
 
-logger = logging.getLogger(__name__)
+CACHE: Dict[tuple, Any] = {}
 
-class AutomationError(Exception):
-    pass
+def memoize(func: Callable) -> Callable:
+    @functools.wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        key = (func.__name__, args, frozenset(kwargs.items()))
+        if key not in CACHE:
+            CACHE[key] = func(*args, **kwargs)
+        return CACHE[key]
+    return wrapper
 
-def execute_task(task_data: dict) -> Optional[Any]:
-    if not isinstance(task_data, dict):
-        logger.error("invalid task format")
-        return None
+class AutomationEngine:
+    def __init__(self, data: list):
+        self.data = data
 
-    try:
-        action = task_data.get("action")
-        if not action:
-            raise ValueError("missing required action key")
-        
-        result = _process(action)
-        return result
-    except (ValueError, KeyError) as e:
-        logger.warning(f"validation failure: {e}")
-    except Exception as e:
-        logger.exception(f"unexpected system error: {e}")
-        raise AutomationError(f"critical failure: {e}") from e
-    return None
+    @memoize
+    def process_heavy_task(self, item: int) -> int:
+        result = sum(i * i for i in range(1000))
+        return result + item
 
-def _process(action: str) -> str:
-    mapping = {"start": "running", "stop": "halted"}
-    if action not in mapping:
-        raise ValueError(f"unsupported action: {action}")
-    return mapping[action]
+    def run_optimized(self) -> list:
+        return [self.process_heavy_task(i) for i in self.data]
+
+def clear_cache() -> None:
+    CACHE.clear()
+
+if __name__ == '__main__':
+    engine = AutomationEngine([1, 2, 3, 1, 2])
+    print(engine.run_optimized())
