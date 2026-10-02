@@ -1,44 +1,34 @@
 import time
-from typing import Any, Callable, List, TypeVar
+import logging
+from functools import wraps
+from typing import Callable, Any, Tuple, Type
 
-T = TypeVar("T")
+logger = logging.getLogger(__name__)
 
 
-def retry_operation(
-    func: Callable[..., T],
-    retries: int = 3,
+def retry(
+    exceptions: Tuple[Type[BaseException], ...] = (Exception,),
+    tries: int = 3,
     delay: float = 1.0,
     backoff: float = 2.0,
-) -> T:
-    """Retry a function with exponential backoff on failure."""
-    current_delay = delay
-    for attempt in range(retries):
-        try:
-            return func()
-        except Exception as err:
-            if attempt == retries - 1:
-                raise err
-            time.sleep(current_delay)
-            current_delay *= backoff
-    raise RuntimeError("Operation failed after maximum retries")
-
-
-def chunk_iterable(data: List[T], chunk_size: int) -> List[List[T]]:
-    """Split a list into smaller lists of specified chunk size."""
-    if chunk_size <= 0:
-        raise ValueError("Chunk size must be greater than zero")
-    return [data[i : i + chunk_size] for i in range(0, len(data), chunk_size)]
-
-
-def flatten_dict(
-    nested: dict[str, Any], parent_key: str = "", sep: str = "."
-) -> dict[str, Any]:
-    """Flatten a nested dictionary structure using delimited keys."""
-    items: list[tuple[str, Any]] = []
-    for key, value in nested.items():
-        new_key = f"{parent_key}{sep}{key}" if parent_key else key
-        if isinstance(value, dict):
-            items.extend(flatten_dict(value, new_key, sep=sep).items())
-        else:
-            items.append((new_key, value))
-    return dict(items)
+) -> Callable:
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            mdelay = delay
+            for attempt in range(1, tries + 1):
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as e:
+                    if attempt == tries:
+                        logger.error(f"Failed after {tries} attempts: {e}")
+                        raise
+                    logger.warning(
+                        f"Error: {e}. Retrying in {mdelay:.2f}s "
+                        f"(attempt {attempt}/{tries})..."
+                    )
+                    time.sleep(mdelay)
+                    mdelay *= backoff
+            return None
+        return wrapper
+    return decorator
