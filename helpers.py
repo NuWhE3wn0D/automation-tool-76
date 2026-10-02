@@ -1,23 +1,41 @@
 import time
-import functools
-import logging
-from typing import Callable, Any
+from typing import Any, Callable, Dict, Type, Union
 
-logger = logging.getLogger(__name__)
 
-def retry(retries: int = 3, delay: float = 1.0, exceptions: tuple = (Exception,)):
-    def decorator(func: Callable):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> Any:
-            last_exception = None
-            for attempt in range(retries):
+def flatten_dict(
+    d: Dict[str, Any], parent_key: str = "", sep: str = "_"
+) -> Dict[str, Any]:
+    """Flatten a nested dictionary, concatenating keys with a separator."""
+    items: list[tuple[str, Any]] = []
+    for k, v in d.items():
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, dict):
+            items.extend(flatten_dict(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
+
+
+def retry(
+    exceptions: Union[Type[Exception], tuple[Type[Exception], ...]],
+    tries: int = 3,
+    delay: float = 1.0,
+    backoff: float = 2.0,
+) -> Callable[..., Any]:
+    """Decorate a function to retry execution upon specified exceptions."""
+
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            mtries, mdelay = tries, delay
+            while mtries > 1:
                 try:
                     return func(*args, **kwargs)
-                except exceptions as e:
-                    last_exception = e
-                    logger.warning(f"attempt {attempt + 1} failed: {e}")
-                    if attempt < retries - 1:
-                        time.sleep(delay)
-            raise last_exception
+                except exceptions:
+                    time.sleep(mdelay)
+                    mtries -= 1
+                    mdelay *= backoff
+            return func(*args, **kwargs)
+
         return wrapper
+
     return decorator
