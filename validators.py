@@ -1,28 +1,25 @@
-import functools
-from typing import Any, Callable, Dict
-
-_memoization_cache: Dict[tuple, Any] = {}
-
-def memoize_validator(func: Callable) -> Callable:
-    @functools.wraps(func)
-    def wrapper(*args: Any, **kwargs: Any) -> Any:
-        key = (func.__name__, args, frozenset(kwargs.items()))
-        if key not in _memoization_cache:
-            _memoization_cache[key] = func(*args, **kwargs)
-        return _memoization_cache[key]
-    return wrapper
+import re
+from typing import Any, Optional
 
 class DataValidator:
     @staticmethod
-    @memoize_validator
-    def validate_schema(data: Any, schema_type: str) -> bool:
-        if not data or not isinstance(schema_type, str):
-            return False
-        return True
+    def is_valid_email(email: str) -> bool:
+        pattern = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+        return bool(re.match(pattern, email))
 
     @staticmethod
-    def batch_process(items: list, validator: Callable) -> list:
-        return [item for item in items if validator(item)]
+    def validate_range(value: int, min_val: int, max_val: int) -> bool:
+        return min_val <= value <= max_val
 
-def clear_validator_cache() -> None:
-    _memoization_cache.clear()
+    @staticmethod
+    def sanitize_input(data: str) -> str:
+        return data.strip().replace('<', '').replace('>', '')
+
+def validate_payload(data: dict, required_keys: list) -> bool:
+    return all(key in data for key in required_keys)
+
+def get_validated_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return default
