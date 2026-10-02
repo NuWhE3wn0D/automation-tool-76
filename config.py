@@ -1,37 +1,39 @@
 import os
 import logging
-from typing import Any, Optional
+from typing import Any, Dict
 
 class ConfigError(Exception):
     pass
 
-def get_env_variable(key: str, default: Optional[str] = None) -> str:
+def load_config(path: str) -> Dict[str, Any]:
+    if not path or not os.path.exists(path):
+        raise ConfigError(f"configuration file not found: {path}")
+
     try:
-        value = os.environ.get(key, default)
-        if value is None:
-            raise ConfigError(f'missing required environment variable: {key}')
-        return value
+        with open(path, 'r') as f:
+            data = f.read()
+            if not data.strip():
+                raise ConfigError("empty configuration file")
+            return {"content": data}
+    except PermissionError:
+        raise ConfigError(f"insufficient permissions for: {path}")
     except Exception as e:
-        logging.error(f'failed to retrieve config: {key}')
-        raise ConfigError(f'config access failure for {key}') from e
+        raise ConfigError(f"unexpected read error: {str(e)}")
 
-class AppConfig:
-    def __init__(self) -> None:
-        self.db_url = get_env_variable('DB_URL')
-        self.timeout = int(get_env_variable('TIMEOUT', '30'))
-
-    def validate(self) -> bool:
-        if not self.db_url.startswith('postgresql://'):
-            raise ConfigError('invalid database protocol')
-        if self.timeout <= 0:
-            raise ConfigError('timeout must be a positive integer')
-        return True
-
-def load_configuration() -> AppConfig:
+def get_setting(config: Dict[str, Any], key: str, default: Any = None) -> Any:
     try:
-        config = AppConfig()
-        config.validate()
-        return config
-    except (ValueError, ConfigError) as e:
-        logging.critical(f'configuration loading aborted: {e}')
-        raise
+        return config.get(key, default)
+    except AttributeError:
+        return default
+
+def validate_env(required_vars: list) -> None:
+    missing = [var for var in required_vars if not os.getenv(var)]
+    if missing:
+        raise ConfigError(f"missing environment variables: {', '.join(missing)}")
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    try:
+        validate_env(["APP_ENV"])
+    except ConfigError as e:
+        logging.error(f"config initialization failure: {e}")
