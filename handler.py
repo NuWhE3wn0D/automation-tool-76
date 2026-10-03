@@ -1,29 +1,29 @@
-import time
 import functools
+import time
 import logging
-from typing import Callable, Any
+import urllib.request
+import urllib.error
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("automation_tool")
 
-def retry(exceptions: tuple, tries: int = 3, delay: float = 1.0, backoff: float = 2.0):
-    def decorator(func: Callable):
+def retry_on_failure(exceptions, tries=3, delay=1, backoff=2):
+    def decorator(func):
         @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> Any:
-            current_tries, current_delay = tries, delay
-            while current_tries > 1:
+        def wrapper(*args, **kwargs):
+            mtries, mdelay = tries, delay
+            while mtries > 1:
                 try:
                     return func(*args, **kwargs)
                 except exceptions as e:
-                    logger.warning(f"{func.__name__} failed: {e}. Retrying in {current_delay}s...")
-                    time.sleep(current_delay)
-                    current_tries -= 1
-                    current_delay *= backoff
+                    logger.warning(f"Retrying {func.__name__} in {mdelay}s due to: {e}")
+                    time.sleep(mdelay)
+                    mtries -= 1
+                    mdelay *= backoff
             return func(*args, **kwargs)
         return wrapper
     return decorator
 
-@retry((ConnectionError, TimeoutError), tries=3, delay=2)
-def network_operation(url: str):
-    logger.info(f"connecting to {url}")
-    # Simulate network call
-    return True
+@retry_on_failure((urllib.error.URLError, ConnectionError, TimeoutError), tries=3, delay=1, backoff=2)
+def execute_network_request(url: str, timeout: int = 5) -> str:
+    with urllib.request.urlopen(url, timeout=timeout) as response:
+        return response.read().decode("utf-8")
