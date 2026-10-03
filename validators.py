@@ -1,25 +1,30 @@
-import re
-from typing import Any, Optional
+import functools
+from typing import Any, Callable, Dict
+
+_memoization_cache: Dict[tuple, Any] = {}
 
 class DataValidator:
     @staticmethod
-    def is_valid_email(email: str) -> bool:
-        pattern = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
-        return bool(re.match(pattern, email))
+    @functools.lru_cache(maxsize=128)
+    def validate_schema(data: tuple) -> bool:
+        if not data:
+            return False
+        return all(isinstance(i, (int, str)) for i in data)
 
-    @staticmethod
-    def validate_range(value: int, min_val: int, max_val: int) -> bool:
-        return min_val <= value <= max_val
+    @classmethod
+    def optimized_check(cls, data: dict) -> bool:
+        keys = tuple(sorted(data.keys()))
+        values = tuple(data.values())
+        return cls.validate_schema(keys + values)
 
-    @staticmethod
-    def sanitize_input(data: str) -> str:
-        return data.strip().replace('<', '').replace('>', '')
+def memoize_result(func: Callable) -> Callable:
+    @functools.wraps(func)
+    def wrapper(*args: Any) -> Any:
+        if args not in _memoization_cache:
+            _memoization_cache[args] = func(*args)
+        return _memoization_cache[args]
+    return wrapper
 
-def validate_payload(data: dict, required_keys: list) -> bool:
-    return all(key in data for key in required_keys)
-
-def get_validated_int(value: Any, default: int = 0) -> int:
-    try:
-        return int(value)
-    except (ValueError, TypeError):
-        return default
+@memoize_result
+def quick_checksum(payload: bytes) -> int:
+    return hash(payload) % 10**9
