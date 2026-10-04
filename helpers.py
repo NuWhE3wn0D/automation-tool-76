@@ -1,33 +1,37 @@
-import os
-import json
+import time
 import logging
-from pathlib import Path
-from typing import Any, Dict
+from functools import wraps
+from typing import Callable, Type, Tuple, Any
 
-def load_json(path: str) -> Dict[str, Any]:
-    path_obj = Path(path)
-    if not path_obj.exists():
-        return {}
-    with open(path_obj, "r", encoding="utf-8") as f:
-        return json.load(f)
+logger = logging.getLogger(__name__)
 
-def save_json(path: str, data: Dict[str, Any]) -> None:
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=4)
 
-def ensure_dir(path: str) -> None:
-    os.makedirs(path, exist_ok=True)
+def retry_operation(
+    max_retries: int = 3,
+    delay: float = 1.0,
+    backoff: float = 2.0,
+    exceptions: Tuple[Type[BaseException], ...] = (Exception,),
+) -> Callable:
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        @wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            current_delay = delay
+            for attempt in range(1, max_retries + 1):
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as err:
+                    if attempt == max_retries:
+                        logger.error(
+                            f"Operation '{func.__name__}' failed after {max_retries} attempts: {err}"
+                        )
+                        raise
+                    logger.warning(
+                        f"Attempt {attempt}/{max_retries} for '{func.__name__}' failed: {err}. "
+                        f"Retrying in {current_delay:.2f}s..."
+                    )
+                    time.sleep(current_delay)
+                    current_delay *= backoff
 
-def get_env_var(key: str, default: Any = None) -> Any:
-    return os.getenv(key, default)
+        return wrapper
 
-def setup_logger(name: str) -> logging.Logger:
-    logger = logging.getLogger(name)
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
-    return logger
+    return decorator
