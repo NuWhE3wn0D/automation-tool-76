@@ -1,37 +1,54 @@
+import re
 import time
-import logging
-from functools import wraps
-from typing import Callable, Type, Tuple, Any
-
-logger = logging.getLogger(__name__)
+from typing import Any, Callable, Dict, Generator, Iterable, List, Type
 
 
-def retry_operation(
-    max_retries: int = 3,
+def chunk_iterable(
+    iterable: Iterable[Any], chunk_size: int
+) -> Generator[List[Any], None, None]:
+    """Yield successive chunks from iterable."""
+    if chunk_size <= 0:
+        raise ValueError("Chunk size must be greater than zero.")
+    chunk = []
+    for item in iterable:
+        chunk.append(item)
+        if len(chunk) == chunk_size:
+            yield chunk
+            chunk = []
+    if chunk:
+        yield chunk
+
+
+def deep_get(data: Dict[str, Any], path: str, default: Any = None) -> Any:
+    """Safely retrieve a nested value from a dictionary using dot notation."""
+    keys = path.split(".")
+    active = data
+    for key in keys:
+        if isinstance(active, dict) and key in active:
+            active = active[key]
+        else:
+            return default
+    return active
+
+
+def sanitize_filename(filename: str, replacement: str = "_") -> str:
+    """Remove characters that are invalid in filenames."""
+    return re.sub(r'[\\/*?:"<>|]', replacement, filename)
+
+
+def retry_call(
+    func: Callable[..., Any],
+    exceptions: tuple[Type[BaseException], ...] = (Exception,),
+    tries: int = 3,
     delay: float = 1.0,
-    backoff: float = 2.0,
-    exceptions: Tuple[Type[BaseException], ...] = (Exception,),
-) -> Callable:
-    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
-        @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            current_delay = delay
-            for attempt in range(1, max_retries + 1):
-                try:
-                    return func(*args, **kwargs)
-                except exceptions as err:
-                    if attempt == max_retries:
-                        logger.error(
-                            f"Operation '{func.__name__}' failed after {max_retries} attempts: {err}"
-                        )
-                        raise
-                    logger.warning(
-                        f"Attempt {attempt}/{max_retries} for '{func.__name__}' failed: {err}. "
-                        f"Retrying in {current_delay:.2f}s..."
-                    )
-                    time.sleep(current_delay)
-                    current_delay *= backoff
-
-        return wrapper
-
-    return decorator
+    *args: Any,
+    **kwargs: Any
+) -> Any:
+    """Retry a function call multiple times before raising the exception."""
+    for attempt in range(tries):
+        try:
+            return func(*args, **kwargs)
+        except exceptions:
+            if attempt == tries - 1:
+                raise
+            time.sleep(delay)
