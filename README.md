@@ -1,49 +1,46 @@
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
 # automation-tool-76
 
-`automation-tool-76` is a lightweight Python engine designed to streamline repetitive filesystem operations and API orchestration tasks. It provides developers with a unified interface to watch directories, execute concurrent HTTP requests, and schedule recurring local scripts with minimal overhead.
+A lightweight, high-performance Python engine designed to streamline repetitive task execution and workflow orchestration. This tool leverages asynchronous processing to manage file operations, API requests, and data parsing with minimal resource overhead.
 
 ## Features
 
-* **Smart Directory Watcher:** Monitor specific paths for file creations or modifications and trigger customized data processing pipelines.
-* **Concurrent API Batching:** Dispatch bulk asynchronous HTTP requests with built-in rate-limiting, exponential backoff, and failure recovery.
-* **Declarative Task Scheduling:** Define and execute cron-like workflows directly inside your Python scripts using an intuitive decorator syntax.
+*   **Async Execution Engine:** Utilizes Python’s `asyncio` to handle concurrent tasks without blocking the main event loop.
+*   **Modular Plugin System:** Easily extend functionality by dropping custom scripts into the `plugins/` directory.
+*   **YAML Configuration:** Manage complex automation sequences through clean, human-readable configuration files.
+*   **Logging & Metrics:** Built-in integration with standard logging for real-time monitoring and failure auditing.
 
 ## Installation
 
-Install the package via pip:
+Ensure you have Python 3.9 or higher installed. Clone the repository and set up your virtual environment:
 
 ```bash
-pip install automation-tool-76
+git clone https://github.com/Developer/automation-tool-76.git
+cd automation-tool-76
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 ```
 
-## Quick Start
+## Usage
 
-The following example demonstrates how to set up a scheduled directory cleanup and compress files automatically.
+Define your task sequence in `config.yaml` and execute the tool using the following command:
 
-```python
-from automation_tool_76 import TaskRunner, FileSystem
+```bash
+# Basic execution
+python main.py --config config.yaml
 
-# Initialize the automation engine
-runner = TaskRunner()
-fs = FileSystem()
+# Run in background mode with output redirection
+python main.py --config config.yaml --silent > process.log 2>&1
+```
 
-@runner.task(interval="1h")
-def archive_old_reports():
-    # Find and compress CSV files older than 7 days
-    target_files = fs.find_files("./data", pattern="*.csv", age_days=7)
-    if target_files:
-        fs.zip_files(target_files, destination="./archives/monthly_report.zip")
-        print(f"Archived {len(target_files)} reports successfully.")
+For a list of all available commands and flags, run:
 
-if __name__ == "__main__":
-    runner.start()
+```bash
+python main.py --help
 ```
 
 ## License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
----
-Developed by Developer.
+This project is licensed under the terms of the MIT license. See the `LICENSE` file for details.
