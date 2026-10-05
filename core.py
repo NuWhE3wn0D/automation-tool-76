@@ -1,53 +1,23 @@
-import subprocess
-from pathlib import Path
-from typing import Any, Union
+import sys
 
+def validate_input(data):
+    if not isinstance(data, dict) or 'id' not in data:
+        raise ValueError('Invalid input format')
+    if not isinstance(data.get('id'), int):
+        raise TypeError('ID must be an integer')
+    return True
 
-def ensure_dir(path: Union[str, Path]) -> Path:
-    p = Path(path)
-    p.mkdir(parents=True, exist_ok=True)
-    return p
+def process_item(item):
+    print(f'Processing: {item}')
 
+def run_loop(items):
+    for item in items:
+        try:
+            if validate_input(item):
+                process_item(item)
+        except (ValueError, TypeError) as e:
+            print(f'Skipping invalid item: {e}', file=sys.stderr)
 
-def run_command(
-    cmd: list[str], timeout: int = 30, cwd: Union[str, Path, None] = None
-) -> dict[str, Any]:
-    try:
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            cwd=cwd,
-            check=False,
-        )
-        return {
-            "success": result.returncode == 0,
-            "stdout": result.stdout.strip(),
-            "stderr": result.stderr.strip(),
-            "exit_code": result.returncode,
-        }
-    except subprocess.TimeoutExpired as e:
-        return {
-            "success": False,
-            "stdout": "",
-            "stderr": f"Command timed out after {timeout} seconds. {str(e)}",
-            "exit_code": -1,
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "stdout": "",
-            "stderr": str(e),
-            "exit_code": -2,
-        }
-
-
-def safe_write(path: Union[str, Path], content: str) -> bool:
-    try:
-        p = Path(path)
-        p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(content, encoding="utf-8")
-        return True
-    except Exception:
-        return False
+if __name__ == '__main__':
+    data_stream = [{'id': 1}, {'id': 'invalid'}, {'id': 2}, None]
+    run_loop(data_stream)
