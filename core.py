@@ -1,23 +1,29 @@
-import sys
+from typing import List, Dict, Any, Optional
 
-def validate_input(data):
-    if not isinstance(data, dict) or 'id' not in data:
-        raise ValueError('Invalid input format')
-    if not isinstance(data.get('id'), int):
-        raise TypeError('ID must be an integer')
-    return True
+class AutomationEngine:
+    """Core engine for executing automation tasks."""
 
-def process_item(item):
-    print(f'Processing: {item}')
+    def __init__(self, tasks: List[Dict[str, Any]]) -> None:
+        self.tasks: List[Dict[str, Any]] = tasks
+        self.results: List[Any] = []
 
-def run_loop(items):
-    for item in items:
-        try:
-            if validate_input(item):
-                process_item(item)
-        except (ValueError, TypeError) as e:
-            print(f'Skipping invalid item: {e}', file=sys.stderr)
+    def process_tasks(self) -> List[Any]:
+        """Process all queued tasks sequentially."""
+        for task in self.tasks:
+            result = self._execute(task)
+            self.results.append(result)
+        return self.results
 
-if __name__ == '__main__':
-    data_stream = [{'id': 1}, {'id': 'invalid'}, {'id': 2}, None]
-    run_loop(data_stream)
+    def _execute(self, task: Dict[str, Any]) -> Any:
+        """Internal execution logic for individual tasks."""
+        action = task.get("action")
+        payload = task.get("payload", {})
+        
+        if action == "log":
+            return f"Logged: {payload}"
+        return "Unknown action"
+
+def initialize_engine(config: Optional[Dict[str, Any]] = None) -> AutomationEngine:
+    """Factory function to create a new engine instance."""
+    tasks = config.get("tasks", []) if config else []
+    return AutomationEngine(tasks=tasks)
