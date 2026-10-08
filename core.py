@@ -1,29 +1,30 @@
-from typing import List, Dict, Any, Optional
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from functools import lru_cache
+from typing import Any, Callable, Iterable, List, TypeVar
 
-class AutomationEngine:
-    """Core engine for executing automation tasks."""
+T = TypeVar("T")
+R = TypeVar("R")
 
-    def __init__(self, tasks: List[Dict[str, Any]]) -> None:
-        self.tasks: List[Dict[str, Any]] = tasks
-        self.results: List[Any] = []
 
-    def process_tasks(self) -> List[Any]:
-        """Process all queued tasks sequentially."""
-        for task in self.tasks:
-            result = self._execute(task)
-            self.results.append(result)
-        return self.results
+class BatchExecutor:
+    def __init__(self, max_workers: int = 8):
+        self.max_workers = max_workers
 
-    def _execute(self, task: Dict[str, Any]) -> Any:
-        """Internal execution logic for individual tasks."""
-        action = task.get("action")
-        payload = task.get("payload", {})
-        
-        if action == "log":
-            return f"Logged: {payload}"
-        return "Unknown action"
+    @lru_cache(maxsize=2048)
+    def _execute_memoized(self, func: Callable[[Any], Any], arg: Any) -> Any:
+        return func(arg)
 
-def initialize_engine(config: Optional[Dict[str, Any]] = None) -> AutomationEngine:
-    """Factory function to create a new engine instance."""
-    tasks = config.get("tasks", []) if config else []
-    return AutomationEngine(tasks=tasks)
+    def map_parallel(self, func: Callable[[T], R], items: Iterable[T]) -> List[R]:
+        unique_items = list(items)
+        results = [None] * len(unique_items)
+
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            futures = {
+                executor.submit(self._execute_memoized, func, item): i
+                for i, item in enumerate(unique_items)
+            }
+            for future in as_completed(futures):
+                index = futures[future]
+                results[index] = future.result()
+
+        return results
