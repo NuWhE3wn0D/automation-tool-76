@@ -1,22 +1,23 @@
 import os
-from pathlib import Path
 from typing import Dict, Any
+from pathlib import Path
 
-class Settings:
-    def __init__(self) -> None:
-        self.base_dir = Path(__file__).resolve().parent
-        self.env = os.getenv("APP_ENV", "development")
-        self.log_level = os.getenv("LOG_LEVEL", "INFO")
-        self.max_retries = int(os.getenv("MAX_RETRIES", "3"))
+class AppConfig:
+    BASE_DIR: Path = Path(__file__).resolve().parent
+    ENV: str = os.getenv("APP_ENV", "development")
+    LOG_LEVEL: str = "INFO" if ENV == "production" else "DEBUG"
+    TIMEOUT: int = int(os.getenv("APP_TIMEOUT", "30"))
 
-    def to_dict(self) -> Dict[str, Any]:
+    @classmethod
+    def to_dict(cls) -> Dict[str, Any]:
         return {
-            "env": self.env,
-            "log_level": self.log_level,
-            "max_retries": self.max_retries
+            "env": cls.ENV,
+            "log_level": cls.LOG_LEVEL,
+            "timeout": cls.TIMEOUT
         }
 
-def get_config() -> Settings:
-    return Settings()
+def load_settings() -> Dict[str, Any]:
+    return AppConfig.to_dict()
 
-config = get_config()
+if __name__ == "__main__":
+    print(load_settings())
