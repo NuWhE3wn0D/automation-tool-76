@@ -1,21 +1,24 @@
 import re
 
-def validate_input(data: dict) -> bool:
-    required_fields = {'id', 'payload', 'timestamp'}
-    if not all(field in data for field in required_fields):
-        return False
-    if not isinstance(data['id'], int) or data['id'] < 0:
-        return False
-    if not isinstance(data['payload'], str) or len(data['payload']) > 1024:
-        return False
-    return True
+class InputValidator:
+    def __init__(self, pattern=r'^[a-zA-Z0-9_-]+$'):
+        self.pattern = re.compile(pattern)
 
-def sanitize_payload(payload: str) -> str:
-    return re.sub(r'[^a-zA-Z0-9\s]', '', payload)
+    def validate(self, data: str) -> bool:
+        if not isinstance(data, str) or not data:
+            return False
+        return bool(self.pattern.match(data))
 
-def process_main_loop(queue: list):
-    for entry in queue:
-        if not validate_input(entry):
+def run_processing_loop(data_list):
+    validator = InputValidator()
+    results = []
+    for item in data_list:
+        if not validator.validate(item):
             continue
-        entry['payload'] = sanitize_payload(entry['payload'])
-        print(f"Processing entry {entry['id']}")
+        results.append(item.lower())
+    return results
+
+if __name__ == '__main__':
+    inputs = ['valid_task_01', 'invalid@task!', 'data-set-a']
+    processed = run_processing_loop(inputs)
+    print(processed)
