@@ -1,26 +1,30 @@
+import time
+import functools
 import logging
-from typing import List, Dict, Any
+from typing import Callable, Any
 
-class DataProcessor:
-    def __init__(self, config: Dict[str, Any]):
-        self.config = config
-        self.logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
-    def sanitize(self, data: List[str]) -> List[str]:
-        return [item.strip() for item in data if item]
+def retry(exceptions: tuple, tries: int = 3, delay: float = 1.0, backoff: float = 2.0):
+    def decorator(func: Callable):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs) -> Any:
+            current_tries, current_delay = tries, delay
+            while current_tries > 1:
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as e:
+                    logger.warning(f"{e}, retrying in {current_delay}s...")
+                    time.sleep(current_delay)
+                    current_tries -= 1
+                    current_delay *= backoff
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
 
-    def process_batch(self, batch: List[str]) -> Dict[str, Any]:
-        cleaned = self.sanitize(batch)
-        return {
-            "count": len(cleaned),
-            "data": cleaned,
-            "status": "success"
-        }
-
-    def run(self, input_data: List[str]) -> None:
-        try:
-            result = self.process_batch(input_data)
-            self.logger.info(f"processed {result['count']} items")
-        except Exception as e:
-            self.logger.error(f"processing failure: {e}")
-            raise
+@retry((ConnectionError, TimeoutError), tries=3, delay=2)
+def fetch_data(url: str) -> str:
+    import requests
+    response = requests.get(url, timeout=5)
+    response.raise_for_status()
+    return response.text
