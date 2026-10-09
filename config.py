@@ -1,34 +1,22 @@
-import json
 import os
-from typing import Any, Dict
+from pathlib import Path
+from typing import Dict, Any
 
-DEFAULT_CONFIG = {
-    "timeout": 30,
-    "retries": 3,
-    "debug": False
-}
+class Settings:
+    def __init__(self) -> None:
+        self.base_dir = Path(__file__).resolve().parent
+        self.env = os.getenv("APP_ENV", "development")
+        self.log_level = os.getenv("LOG_LEVEL", "INFO")
+        self.max_retries = int(os.getenv("MAX_RETRIES", "3"))
 
-class ConfigLoader:
-    def __init__(self, filepath: str = "config.json"):
-        self.filepath = filepath
-        self.data = DEFAULT_CONFIG.copy()
-        self._load()
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "env": self.env,
+            "log_level": self.log_level,
+            "max_retries": self.max_retries
+        }
 
-    def _load(self) -> None:
-        if os.path.exists(self.filepath):
-            try:
-                with open(self.filepath, "r") as f:
-                    user_data = json.load(f)
-                    self.data.update(user_data)
-            except (json.JSONDecodeError, IOError):
-                pass
+def get_config() -> Settings:
+    return Settings()
 
-    def get(self, key: str, default: Any = None) -> Any:
-        return self.data.get(key, default)
-
-    def __getitem__(self, key: str) -> Any:
-        return self.data[key]
-
-    def save(self) -> None:
-        with open(self.filepath, "w") as f:
-            json.dump(self.data, f, indent=4)
+config = get_config()
