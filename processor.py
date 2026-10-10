@@ -1,30 +1,38 @@
-import time
-import functools
-import logging
-from typing import Callable, Any
+import json
+from typing import Any, Dict, List, Union
 
-logger = logging.getLogger(__name__)
 
-def retry(exceptions: tuple, tries: int = 3, delay: float = 1.0, backoff: float = 2.0):
-    def decorator(func: Callable):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> Any:
-            current_tries, current_delay = tries, delay
-            while current_tries > 1:
-                try:
-                    return func(*args, **kwargs)
-                except exceptions as e:
-                    logger.warning(f"{e}, retrying in {current_delay}s...")
-                    time.sleep(current_delay)
-                    current_tries -= 1
-                    current_delay *= backoff
-            return func(*args, **kwargs)
-        return wrapper
-    return decorator
+def clean_data(data: Any) -> Any:
+    """Recursively strips string whitespace from nested structures."""
+    if isinstance(data, dict):
+        return {k: clean_data(v) for k, v in data.items()}
+    if isinstance(data, list):
+        return [clean_data(item) for item in data]
+    if isinstance(data, str):
+        return data.strip()
+    return data
 
-@retry((ConnectionError, TimeoutError), tries=3, delay=2)
-def fetch_data(url: str) -> str:
-    import requests
-    response = requests.get(url, timeout=5)
-    response.raise_for_status()
-    return response.text
+
+def safe_load_json(data: str) -> Union[Dict, List, None]:
+    """Safely parses JSON strings into Python objects."""
+    try:
+        return json.loads(data)
+    except (json.JSONDecodeError, TypeError):
+        return None
+
+
+def flatten_dict(d: Dict, parent_key: str = '', sep: str = '_') -> Dict:
+    """Flattens nested dictionaries into single-level structures."""
+    items = []
+    for k, v in d.items():
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, dict):
+            items.extend(flatten_dict(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
+
+
+def validate_schema(data: Dict, required_keys: List[str]) -> bool:
+    """Validates presence of required keys in dictionary."""
+    return all(key in data for key in required_keys)
