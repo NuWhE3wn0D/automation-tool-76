@@ -1,45 +1,34 @@
-import os
 import logging
-from logging.handlers import RotatingFileHandler
+import functools
+import time
+from typing import Callable, Any
 
-DEFAULT_LOG_FILE = "automation.log"
-DEFAULT_MAX_BYTES = 5 * 1024 * 1024
-DEFAULT_BACKUP_COUNT = 3
-LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+_log_cache = {}
 
+class PerformanceLogger:
+    def __init__(self, name: str = "automation-tool-76"):
+        self.logger = logging.getLogger(name)
+        self.logger.setLevel(logging.INFO)
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+        self.logger.addHandler(handler)
 
-def setup_logger(
-    name: str = "automation",
-    log_file: str = DEFAULT_LOG_FILE,
-    level: int = logging.INFO,
-    max_bytes: int = DEFAULT_MAX_BYTES,
-    backup_count: int = DEFAULT_BACKUP_COUNT,
-) -> logging.Logger:
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
+    @staticmethod
+    def measure(func: Callable) -> Callable:
+        @functools.wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            start = time.perf_counter()
+            result = func(*args, **kwargs)
+            duration = time.perf_counter() - start
+            if duration > 0.1:
+                print(f"[PERF] {func.__name__} took {duration:.4f}s")
+            return result
+        return wrapper
 
-    if logger.handlers:
-        return logger
+    def get_logger(self) -> logging.Logger:
+        return self.logger
 
-    formatter = logging.Formatter(LOG_FORMAT)
-
-    log_dir = os.path.dirname(log_file)
-    if log_dir:
-        os.makedirs(log_dir, exist_ok=True)
-
-    file_handler = RotatingFileHandler(
-        log_file,
-        maxBytes=max_bytes,
-        backupCount=backup_count,
-        encoding="utf-8",
-    )
-    file_handler.setFormatter(formatter)
-    file_handler.setLevel(level)
-    logger.addHandler(file_handler)
-
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-    console_handler.setLevel(level)
-    logger.addHandler(console_handler)
-
-    return logger
+def get_instance() -> logging.Logger:
+    if "default" not in _log_cache:
+        _log_cache["default"] = PerformanceLogger().get_logger()
+    return _log_cache["default"]
