@@ -1,46 +1,31 @@
-import re
-import time
-from typing import Any, Callable, Generator, TypeVar
+import os
+import json
+import logging
+from pathlib import Path
+from typing import Any, Dict
 
-T = TypeVar("T")
+def load_json(file_path: str) -> Dict[str, Any]:
+    path = Path(file_path)
+    if not path.exists():
+        return {}
+    with open(path, 'r', encoding='utf-8') as f:
+        return json.load(f)
 
+def save_json(data: Dict[str, Any], file_path: str) -> None:
+    with open(file_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=4)
 
-def retry(
-    func: Callable[..., T],
-    retries: int = 3,
-    delay: float = 1.0,
-    backoff: float = 2.0,
-    exceptions: tuple[type[BaseException], ...] = (Exception,),
-) -> T:
-    current_delay = delay
-    for attempt in range(retries):
-        try:
-            return func()
-        except exceptions as err:
-            if attempt == retries - 1:
-                raise err
-            time.sleep(current_delay)
-            current_delay *= backoff
-    raise RuntimeError("Unreachable code in retry helper")
+def ensure_dir(dir_path: str) -> None:
+    Path(dir_path).mkdir(parents=True, exist_ok=True)
 
+def get_env_variable(key: str, default: str = '') -> str:
+    return os.environ.get(key, default)
 
-def sanitize_filename(filename: str, replacement: str = "_") -> str:
-    cleaned = re.sub(r'[\\/*?:"<>|]', replacement, filename)
-    return cleaned.strip()
-
-
-def chunk_list(items: list[T], size: int) -> Generator[list[T], None, None]:
-    if size <= 0:
-        raise ValueError("Chunk size must be greater than zero")
-    for i in range(0, len(items), size):
-        yield items[i : i + size]
-
-
-def deep_merge(dict_a: dict[str, Any], dict_b: dict[str, Any]) -> dict[str, Any]:
-    result = dict_a.copy()
-    for key, value in dict_b.items():
-        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
-            result[key] = deep_merge(result[key], value)
-        else:
-            result[key] = value
-    return result
+def setup_logger(name: str) -> logging.Logger:
+    logger = logging.getLogger(name)
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+    return logger
