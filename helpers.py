@@ -1,35 +1,46 @@
-import os
-import shutil
-from typing import List, Optional
-from pathlib import Path
+import re
+import time
+from typing import Any, Callable, Generator, TypeVar
 
-class CleanupUtility:
-    def __init__(self, target_dir: str):
-        self.target_dir = Path(target_dir)
+T = TypeVar("T")
 
-    def remove_files_by_extension(self, extension: str) -> int:
-        count = 0
-        for file_path in self.target_dir.glob(f'*{extension}'):
-            if file_path.is_file():
-                file_path.unlink()
-                count += 1
-        return count
 
-    def purge_directory(self, folder: str) -> bool:
-        path = self.target_dir / folder
-        if path.exists() and path.is_dir():
-            shutil.rmtree(path)
-            return True
-        return False
+def retry(
+    func: Callable[..., T],
+    retries: int = 3,
+    delay: float = 1.0,
+    backoff: float = 2.0,
+    exceptions: tuple[type[BaseException], ...] = (Exception,),
+) -> T:
+    current_delay = delay
+    for attempt in range(retries):
+        try:
+            return func()
+        except exceptions as err:
+            if attempt == retries - 1:
+                raise err
+            time.sleep(current_delay)
+            current_delay *= backoff
+    raise RuntimeError("Unreachable code in retry helper")
 
-def get_directory_size(path: str) -> int:
-    root = Path(path)
-    return sum(f.stat().st_size for f in root.glob('**/*') if f.is_file())
 
-def sanitize_path(raw_path: str) -> Optional[Path]:
-    path = Path(raw_path).expanduser().resolve()
-    return path if path.exists() else None
+def sanitize_filename(filename: str, replacement: str = "_") -> str:
+    cleaned = re.sub(r'[\\/*?:"<>|]', replacement, filename)
+    return cleaned.strip()
 
-if __name__ == '__main__':
-    utility = CleanupUtility('./temp')
-    print(f'Cleaned {utility.remove_files_by_extension(".tmp")} files.')
+
+def chunk_list(items: list[T], size: int) -> Generator[list[T], None, None]:
+    if size <= 0:
+        raise ValueError("Chunk size must be greater than zero")
+    for i in range(0, len(items), size):
+        yield items[i : i + size]
+
+
+def deep_merge(dict_a: dict[str, Any], dict_b: dict[str, Any]) -> dict[str, Any]:
+    result = dict_a.copy()
+    for key, value in dict_b.items():
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = deep_merge(result[key], value)
+        else:
+            result[key] = value
+    return result
