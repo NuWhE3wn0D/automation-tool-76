@@ -1,30 +1,33 @@
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from functools import lru_cache
-from typing import Any, Callable, Iterable, List, TypeVar
+import functools
+import time
+from typing import Callable, Any, Dict
 
-T = TypeVar("T")
-R = TypeVar("R")
+CACHE_LIMIT = 128
 
+def memoize(func: Callable) -> Callable:
+    cache: Dict[tuple, Any] = {}
 
-class BatchExecutor:
-    def __init__(self, max_workers: int = 8):
-        self.max_workers = max_workers
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs) -> Any:
+        key = (args, tuple(sorted(kwargs.items())))
+        if key not in cache:
+            if len(cache) >= CACHE_LIMIT:
+                cache.clear()
+            cache[key] = func(*args, **kwargs)
+        return cache[key]
+    return wrapper
 
-    @lru_cache(maxsize=2048)
-    def _execute_memoized(self, func: Callable[[Any], Any], arg: Any) -> Any:
-        return func(arg)
+class PerformanceOptimizer:
+    @staticmethod
+    def profile_execution(func: Callable) -> Callable:
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs) -> Any:
+            start = time.perf_counter()
+            result = func(*args, **kwargs)
+            duration = time.perf_counter() - start
+            return result
+        return wrapper
 
-    def map_parallel(self, func: Callable[[T], R], items: Iterable[T]) -> List[R]:
-        unique_items = list(items)
-        results = [None] * len(unique_items)
-
-        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            futures = {
-                executor.submit(self._execute_memoized, func, item): i
-                for i, item in enumerate(unique_items)
-            }
-            for future in as_completed(futures):
-                index = futures[future]
-                results[index] = future.result()
-
-        return results
+    @staticmethod
+    def batch_process(data: list, size: int) -> list:
+        return [data[i:i + size] for i in range(0, len(data), size)]
