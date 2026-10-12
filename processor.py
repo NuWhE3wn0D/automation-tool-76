@@ -1,38 +1,38 @@
-import json
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional
 
 
-def clean_data(data: Any) -> Any:
-    """Recursively strips string whitespace from nested structures."""
-    if isinstance(data, dict):
-        return {k: clean_data(v) for k, v in data.items()}
-    if isinstance(data, list):
-        return [clean_data(item) for item in data]
-    if isinstance(data, str):
-        return data.strip()
-    return data
+def validate_item(item: Dict[str, Any]) -> bool:
+    if not isinstance(item, dict):
+        return False
+    if "id" not in item or not isinstance(item["id"], (int, str)):
+        return False
+    if "action" not in item or not isinstance(item["action"], str):
+        return False
+    return True
 
 
-def safe_load_json(data: str) -> Union[Dict, List, None]:
-    """Safely parses JSON strings into Python objects."""
-    try:
-        return json.loads(data)
-    except (json.JSONDecodeError, TypeError):
-        return None
+class DataProcessor:
+    def __init__(self, config: Optional[Dict[str, Any]] = None) -> None:
+        self.config = config or {}
+        self.processed_count = 0
+        self.errors: List[Dict[str, Any]] = []
 
+    def process_batch(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        results = []
+        for idx, item in enumerate(items):
+            if not validate_item(item):
+                self.errors.append({"index": idx, "item": item, "reason": "Invalid payload format"})
+                continue
 
-def flatten_dict(d: Dict, parent_key: str = '', sep: str = '_') -> Dict:
-    """Flattens nested dictionaries into single-level structures."""
-    items = []
-    for k, v in d.items():
-        new_key = f"{parent_key}{sep}{k}" if parent_key else k
-        if isinstance(v, dict):
-            items.extend(flatten_dict(v, new_key, sep=sep).items())
-        else:
-            items.append((new_key, v))
-    return dict(items)
+            processed = self._execute_task(item)
+            results.append(processed)
+            self.processed_count += 1
 
+        return results
 
-def validate_schema(data: Dict, required_keys: List[str]) -> bool:
-    """Validates presence of required keys in dictionary."""
-    return all(key in data for key in required_keys)
+    def _execute_task(self, item: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            "id": item["id"],
+            "status": "completed",
+            "result": f"Executed action '{item['action']}' successfully"
+        }
