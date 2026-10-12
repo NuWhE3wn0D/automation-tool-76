@@ -1,23 +1,55 @@
+import json
 import os
-from typing import Dict, Any
-from pathlib import Path
+from typing import Any, Dict, Optional
 
-class AppConfig:
-    BASE_DIR: Path = Path(__file__).resolve().parent
-    ENV: str = os.getenv("APP_ENV", "development")
-    LOG_LEVEL: str = "INFO" if ENV == "production" else "DEBUG"
-    TIMEOUT: int = int(os.getenv("APP_TIMEOUT", "30"))
+DEFAULT_CONFIG: Dict[str, Any] = {
+    "app_name": "automation-tool-76",
+    "debug": False,
+    "log_level": "INFO",
+    "timeout": 30,
+    "max_retries": 3,
+    "output_dir": "./output",
+}
 
-    @classmethod
-    def to_dict(cls) -> Dict[str, Any]:
-        return {
-            "env": cls.ENV,
-            "log_level": cls.LOG_LEVEL,
-            "timeout": cls.TIMEOUT
+
+class ConfigLoader:
+    def __init__(self, config_path: Optional[str] = None):
+        self.config_path = config_path or os.getenv("APP_CONFIG_PATH", "config.json")
+        self._config: Dict[str, Any] = DEFAULT_CONFIG.copy()
+        self.load()
+
+    def load(self) -> Dict[str, Any]:
+        if os.path.exists(self.config_path):
+            try:
+                with open(self.config_path, "r", encoding="utf-8") as f:
+                    file_config = json.load(f)
+                    if isinstance(file_config, dict):
+                        self._config.update(file_config)
+            except (json.JSONDecodeError, OSError):
+                pass
+
+        self._apply_env_overrides()
+        return self._config
+
+    def _apply_env_overrides(self) -> None:
+        env_mappings = {
+            "APP_DEBUG": ("debug", lambda x: x.lower() in ("true", "1", "yes")),
+            "APP_LOG_LEVEL": ("log_level", str),
+            "APP_TIMEOUT": ("timeout", int),
+            "APP_MAX_RETRIES": ("max_retries", int),
+            "APP_OUTPUT_DIR": ("output_dir", str),
         }
+        for env_var, (config_key, transform) in env_mappings.items():
+            val = os.getenv(env_var)
+            if val is not None:
+                try:
+                    self._config[config_key] = transform(val)
+                except ValueError:
+                    pass
 
-def load_settings() -> Dict[str, Any]:
-    return AppConfig.to_dict()
+    def get(self, key: str, default: Any = None) -> Any:
+        return self._config.get(key, default)
 
-if __name__ == "__main__":
-    print(load_settings())
+    @property
+    def config(self) -> Dict[str, Any]:
+        return self._config
