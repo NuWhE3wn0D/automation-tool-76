@@ -1,33 +1,42 @@
-import functools
-import time
-from typing import Callable, Any, Dict
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from functools import lru_cache
+from typing import Any, Callable, Iterable, List, TypeVar
 
-CACHE_LIMIT = 128
+T = TypeVar("T")
+R = TypeVar("R")
 
-def memoize(func: Callable) -> Callable:
-    cache: Dict[tuple, Any] = {}
 
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs) -> Any:
-        key = (args, tuple(sorted(kwargs.items())))
-        if key not in cache:
-            if len(cache) >= CACHE_LIMIT:
-                cache.clear()
-            cache[key] = func(*args, **kwargs)
-        return cache[key]
-    return wrapper
+class CoreTaskProcessor:
+    def __init__(self, max_workers: int = 8, cache_size: int = 2048) -> None:
+        self.max_workers = max_workers
+        self.executor = ThreadPoolExecutor(max_workers=max_workers)
+        self._setup_cache(cache_size)
 
-class PerformanceOptimizer:
+    def _setup_cache(self, size: int) -> None:
+        @lru_cache(maxsize=size)
+        def memoized_apply(func: Callable[[Any], Any], arg: Any) -> Any:
+            return func(arg)
+
+        self._memoized_apply = memoized_apply
+
+    def map_cached(self, func: Callable[[T], R], items: Iterable[T]) -> List[R]:
+        return [self._memoized_apply(func, item) for item in items]
+
+    def process_parallel(self, func: Callable[[T], R], items: List[T], chunk_size: int = 100) -> List[R]:
+        if not items:
+            return []
+
+        chunks = [items[i:i + chunk_size] for i in range(0, len(items), chunk_size)]
+        futures = [self.executor.submit(self._process_chunk, func, chunk) for chunk in chunks]
+
+        results: List[R] = []
+        for future in as_completed(futures):
+            results.extend(future.result())
+        return results
+
     @staticmethod
-    def profile_execution(func: Callable) -> Callable:
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> Any:
-            start = time.perf_counter()
-            result = func(*args, **kwargs)
-            duration = time.perf_counter() - start
-            return result
-        return wrapper
+    def _process_chunk(func: Callable[[T], R], chunk: List[T]) -> List[R]:
+        return [func(item) for item in chunk]
 
-    @staticmethod
-    def batch_process(data: list, size: int) -> list:
-        return [data[i:i + size] for i in range(0, len(data), size)]
+    def close(self) -> None:
+        self.executor.shutdown(wait=True)
