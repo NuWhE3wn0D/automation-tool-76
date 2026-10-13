@@ -1,31 +1,34 @@
 import logging
-from typing import List, Dict, Any
-
-logger = logging.getLogger(__name__)
 
 class DataProcessor:
-    def __init__(self, settings: Dict[str, Any]):
-        self.settings = settings
+    def __init__(self, schema):
+        self.schema = schema
+        self.logger = logging.getLogger(__name__)
 
-    def sanitize(self, data: List[str]) -> List[str]:
-        return [item.strip() for item in data if item]
+    def validate(self, data: dict) -> bool:
+        if not isinstance(data, dict):
+            return False
+        return all(key in data for key in self.schema)
 
-    def process_batch(self, batch: List[str]) -> Dict[str, Any]:
-        try:
-            cleaned = self.sanitize(batch)
-            return {
-                "count": len(cleaned),
-                "data": cleaned,
-                "status": "success"
-            }
-        except Exception as e:
-            logger.error(f"processing failure: {e}")
-            return {"status": "error", "message": str(e)}
+    def process_stream(self, data_stream):
+        for entry in data_stream:
+            if not self.validate(entry):
+                self.logger.warning(f"invalid input received: {entry}")
+                continue
+            self._execute(entry)
 
-def initialize_pipeline(config: Dict[str, Any]) -> DataProcessor:
-    return DataProcessor(config)
+    def _execute(self, data):
+        self.logger.info(f"processing item: {data.get('id')}")
 
-if __name__ == "__main__":
-    processor = initialize_pipeline({"mode": "default"})
-    sample = [" item1 ", "", " item2 "]
-    print(processor.process_batch(sample))
+def main():
+    logging.basicConfig(level=logging.INFO)
+    processor = DataProcessor(schema=['id', 'payload'])
+    mock_data = [
+        {'id': 1, 'payload': 'data1'},
+        {'invalid': 'entry'},
+        {'id': 2, 'payload': 'data2'}
+    ]
+    processor.process_stream(mock_data)
+
+if __name__ == '__main__':
+    main()
