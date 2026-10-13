@@ -1,34 +1,31 @@
 import logging
-import functools
-import time
-from typing import Callable, Any
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
-_log_cache = {}
+LOG_FILE = "automation.log"
+MAX_BYTES = 5 * 1024 * 1024
+BACKUP_COUNT = 3
 
-class PerformanceLogger:
-    def __init__(self, name: str = "automation-tool-76"):
-        self.logger = logging.getLogger(name)
-        self.logger.setLevel(logging.INFO)
-        handler = logging.StreamHandler()
-        handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-        self.logger.addHandler(handler)
+def get_logger(name: str) -> logging.Logger:
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
 
-    @staticmethod
-    def measure(func: Callable) -> Callable:
-        @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            start = time.perf_counter()
-            result = func(*args, **kwargs)
-            duration = time.perf_counter() - start
-            if duration > 0.1:
-                print(f"[PERF] {func.__name__} took {duration:.4f}s")
-            return result
-        return wrapper
+    if not logger.handlers:
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
 
-    def get_logger(self) -> logging.Logger:
-        return self.logger
+        file_handler = RotatingFileHandler(
+            LOG_FILE, 
+            maxBytes=MAX_BYTES, 
+            backup_count=BACKUP_COUNT
+        )
+        file_handler.setFormatter(formatter)
+        
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
 
-def get_instance() -> logging.Logger:
-    if "default" not in _log_cache:
-        _log_cache["default"] = PerformanceLogger().get_logger()
-    return _log_cache["default"]
+        logger.addHandler(file_handler)
+        logger.addHandler(console_handler)
+
+    return logger
