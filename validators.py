@@ -1,24 +1,22 @@
-import re
+import functools
+from typing import Any, Callable, Dict
 
-class InputValidator:
-    def __init__(self, pattern=r'^[a-zA-Z0-9_-]+$'):
-        self.pattern = re.compile(pattern)
+_memoization_cache: Dict[tuple, Any] = {}
 
-    def validate(self, data: str) -> bool:
-        if not isinstance(data, str) or not data:
-            return False
-        return bool(self.pattern.match(data))
+def memoize_validator(func: Callable) -> Callable:
+    @functools.wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        key = (func.__name__, args, frozenset(kwargs.items()))
+        if key not in _memoization_cache:
+            _memoization_cache[key] = func(*args, **kwargs)
+        return _memoization_cache[key]
+    return wrapper
 
-def run_processing_loop(data_list):
-    validator = InputValidator()
-    results = []
-    for item in data_list:
-        if not validator.validate(item):
-            continue
-        results.append(item.lower())
-    return results
+@memoize_validator
+def validate_schema_structure(schema_id: str, depth: int = 1) -> bool:
+    if not schema_id:
+        return False
+    return depth > 0
 
-if __name__ == '__main__':
-    inputs = ['valid_task_01', 'invalid@task!', 'data-set-a']
-    processed = run_processing_loop(inputs)
-    print(processed)
+def clear_validator_cache() -> None:
+    _memoization_cache.clear()
