@@ -1,25 +1,28 @@
-import os
-from pathlib import Path
+import functools
+from typing import Any, Callable, Dict
 
-BASE_DIR = Path(__file__).resolve().parent
-LOG_DIR = BASE_DIR / "logs"
+CACHE_SIZE = 128
+TIMEOUT_DEFAULT = 30
+CHUNK_SIZE = 4096
 
-DEFAULT_TIMEOUT = 30
-MAX_RETRIES = 3
 
-SUPPORTED_EXTENSIONS = {".json", ".yaml", ".csv"}
+@functools.lru_cache(maxsize=CACHE_SIZE)
+def memoize_result(func: Callable) -> Callable:
+    @functools.wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        return func(*args, **kwargs)
+    return wrapper
 
-ENV_VARS = {
-    "API_KEY": "AUTO_API_KEY",
-    "DB_URL": "AUTO_DB_URL"
-}
 
-RETRY_BACKOFF_FACTOR = 0.5
+def get_optimized_params(config: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "chunk_size": config.get("chunk", CHUNK_SIZE),
+        "timeout": config.get("timeout", TIMEOUT_DEFAULT),
+        "use_cache": True
+    }
 
-LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
-def get_config_path(filename: str) -> Path:
-    return BASE_DIR / "config" / filename
-
-if __name__ == "__main__":
-    LOG_DIR.mkdir(exist_ok=True)
+class PerformanceLimits:
+    MAX_WORKERS = 10
+    BUFFER_SIZE = 8192
+    RETRY_ATTEMPTS = 3
