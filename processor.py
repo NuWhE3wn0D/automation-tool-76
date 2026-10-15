@@ -1,34 +1,32 @@
 import logging
+from typing import Any, Optional
 
-class DataProcessor:
-    def __init__(self, schema):
-        self.schema = schema
-        self.logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
-    def validate(self, data: dict) -> bool:
-        if not isinstance(data, dict):
-            return False
-        return all(key in data for key in self.schema)
+class DataProcessingError(Exception):
+    pass
 
-    def process_stream(self, data_stream):
-        for entry in data_stream:
-            if not self.validate(entry):
-                self.logger.warning(f"invalid input received: {entry}")
-                continue
-            self._execute(entry)
+class Processor:
+    def __init__(self, settings: Optional[dict] = None):
+        self.settings = settings or {}
 
-    def _execute(self, data):
-        self.logger.info(f"processing item: {data.get('id')}")
+    def execute(self, data: Any) -> Any:
+        if not isinstance(data, (dict, list)):
+            logger.error(f"invalid input type: {type(data)}")
+            raise ValueError("input must be dict or list")
 
-def main():
-    logging.basicConfig(level=logging.INFO)
-    processor = DataProcessor(schema=['id', 'payload'])
-    mock_data = [
-        {'id': 1, 'payload': 'data1'},
-        {'invalid': 'entry'},
-        {'id': 2, 'payload': 'data2'}
-    ]
-    processor.process_stream(mock_data)
+        try:
+            return self._process(data)
+        except (KeyError, TypeError) as e:
+            logger.exception("data structure mismatch")
+            raise DataProcessingError("processing failed due to malformed data") from e
+        except Exception as e:
+            logger.critical("unexpected runtime failure")
+            raise DataProcessingError("unhandled system error") from e
 
-if __name__ == '__main__':
-    main()
+    def _process(self, data: Any) -> Any:
+        if not data:
+            return None
+        if isinstance(data, dict):
+            return {k: v for k, v in data.items() if v is not None}
+        return [item for item in data if item is not None]
