@@ -1,49 +1,43 @@
 import json
 import os
-import time
-from typing import Any, Callable, Optional, Type
+from typing import Any, Dict, Optional
 
 
-def safe_json_loads(data: str, default: Any = None) -> Any:
-    if not isinstance(data, (str, bytes)):
+def safe_load_json(file_path: str, default: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    if default is None:
+        default = {}
+    if not isinstance(file_path, (str, bytes, os.PathLike)):
         return default
     try:
-        return json.loads(data)
-    except (json.JSONDecodeError, TypeError, UnicodeDecodeError):
+        if not os.path.isfile(file_path):
+            return default
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data if isinstance(data, dict) else default
+    except (json.JSONDecodeError, OSError, TypeError):
         return default
 
 
-def safe_read_file(file_path: str, encoding: str = "utf-8") -> Optional[str]:
-    if not file_path or not os.path.isfile(file_path):
-        return None
+def safe_save_json(file_path: str, data: Any, indent: int = 4) -> bool:
+    if not file_path or not isinstance(data, (dict, list)):
+        return False
     try:
-        with open(file_path, "r", encoding=encoding) as f:
-            return f.read()
-    except (OSError, PermissionError, UnicodeDecodeError):
-        return None
+        dir_name = os.path.dirname(file_path)
+        if dir_name:
+            os.makedirs(dir_name, exist_ok=True)
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=indent, default=str)
+        return True
+    except (OSError, TypeError, ValueError):
+        return False
 
 
-def retry_operation(
-    func: Callable[..., Any],
-    retries: int = 3,
-    delay: float = 1.0,
-    allowed_exceptions: tuple[Type[Exception], ...] = (Exception,),
-) -> Any:
-    if retries < 1:
-        raise ValueError("Retries must be at least 1")
-    for attempt in range(retries):
-        try:
-            return func()
-        except allowed_exceptions:
-            if attempt == retries - 1:
-                raise
-            time.sleep(delay)
-
-
-def safe_cast(value: Any, to_type: Type, default: Any = None) -> Any:
-    if value is None:
+def nested_get(data: Any, keys: str, default: Any = None, delimiter: str = ".") -> Any:
+    if not isinstance(data, dict) or not isinstance(keys, str):
         return default
-    try:
-        return to_type(value)
-    except (ValueError, TypeError):
-        return default
+    current = data
+    for key in keys.split(delimiter):
+        if not isinstance(current, dict) or key not in current:
+            return default
+        current = current[key]
+    return current
