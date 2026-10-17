@@ -1,42 +1,24 @@
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from functools import lru_cache
-from typing import Any, Callable, Iterable, List, TypeVar
+import time
+import functools
+from typing import Callable, Any
 
-T = TypeVar("T")
-R = TypeVar("R")
+def retry(retries: int = 3, delay: float = 1.0, exceptions: tuple = (Exception,)):
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs) -> Any:
+            last_exception = None
+            for attempt in range(retries):
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as e:
+                    last_exception = e
+                    time.sleep(delay * (2 ** attempt))
+            raise last_exception
+        return wrapper
+    return decorator
 
-
-class CoreTaskProcessor:
-    def __init__(self, max_workers: int = 8, cache_size: int = 2048) -> None:
-        self.max_workers = max_workers
-        self.executor = ThreadPoolExecutor(max_workers=max_workers)
-        self._setup_cache(cache_size)
-
-    def _setup_cache(self, size: int) -> None:
-        @lru_cache(maxsize=size)
-        def memoized_apply(func: Callable[[Any], Any], arg: Any) -> Any:
-            return func(arg)
-
-        self._memoized_apply = memoized_apply
-
-    def map_cached(self, func: Callable[[T], R], items: Iterable[T]) -> List[R]:
-        return [self._memoized_apply(func, item) for item in items]
-
-    def process_parallel(self, func: Callable[[T], R], items: List[T], chunk_size: int = 100) -> List[R]:
-        if not items:
-            return []
-
-        chunks = [items[i:i + chunk_size] for i in range(0, len(items), chunk_size)]
-        futures = [self.executor.submit(self._process_chunk, func, chunk) for chunk in chunks]
-
-        results: List[R] = []
-        for future in as_completed(futures):
-            results.extend(future.result())
-        return results
-
-    @staticmethod
-    def _process_chunk(func: Callable[[T], R], chunk: List[T]) -> List[R]:
-        return [func(item) for item in chunk]
-
-    def close(self) -> None:
-        self.executor.shutdown(wait=True)
+@retry(retries=3, delay=0.5)
+def fetch_network_data(url: str) -> str:
+    import urllib.request
+    with urllib.request.urlopen(url) as response:
+        return response.read().decode('utf-8')
