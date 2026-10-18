@@ -1,43 +1,31 @@
 import json
-import os
-from typing import Any, Dict, Optional
+import logging
+import pathlib
+from typing import Any, Dict
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-def safe_load_json(file_path: str, default: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    if default is None:
-        default = {}
-    if not isinstance(file_path, (str, bytes, os.PathLike)):
-        return default
-    try:
-        if not os.path.isfile(file_path):
-            return default
-        with open(file_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            return data if isinstance(data, dict) else default
-    except (json.JSONDecodeError, OSError, TypeError):
-        return default
+def load_json(file_path: str) -> Dict[str, Any]:
+    path = pathlib.Path(file_path)
+    if not path.exists():
+        return {}
+    with path.open('r', encoding='utf-8') as f:
+        return json.load(f)
 
+def save_json(file_path: str, data: Dict[str, Any]) -> None:
+    with pathlib.Path(file_path).open('w', encoding='utf-8') as f:
+        json.dump(data, f, indent=4)
 
-def safe_save_json(file_path: str, data: Any, indent: int = 4) -> bool:
-    if not file_path or not isinstance(data, (dict, list)):
-        return False
-    try:
-        dir_name = os.path.dirname(file_path)
-        if dir_name:
-            os.makedirs(dir_name, exist_ok=True)
-        with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=indent, default=str)
-        return True
-    except (OSError, TypeError, ValueError):
-        return False
+def ensure_directory(dir_path: str) -> None:
+    pathlib.Path(dir_path).mkdir(parents=True, exist_ok=True)
 
+def format_byte_size(size: int) -> str:
+    for unit in ['B', 'KB', 'MB', 'GB']:
+        if size < 1024:
+            return f"{size:.2f} {unit}"
+        size /= 1024
+    return f"{size:.2f} TB"
 
-def nested_get(data: Any, keys: str, default: Any = None, delimiter: str = ".") -> Any:
-    if not isinstance(data, dict) or not isinstance(keys, str):
-        return default
-    current = data
-    for key in keys.split(delimiter):
-        if not isinstance(current, dict) or key not in current:
-            return default
-        current = current[key]
-    return current
+def get_file_list(directory: str, extension: str = "*") -> list[pathlib.Path]:
+    return list(pathlib.Path(directory).glob(f"*.{extension}"))
