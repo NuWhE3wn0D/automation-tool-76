@@ -1,31 +1,44 @@
-import json
+import functools
 import logging
-import pathlib
-from typing import Any, Dict
+import time
+from typing import Any, Callable, Tuple, Type
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def load_json(file_path: str) -> Dict[str, Any]:
-    path = pathlib.Path(file_path)
-    if not path.exists():
-        return {}
-    with path.open('r', encoding='utf-8') as f:
-        return json.load(f)
 
-def save_json(file_path: str, data: Dict[str, Any]) -> None:
-    with pathlib.Path(file_path).open('w', encoding='utf-8') as f:
-        json.dump(data, f, indent=4)
+def retry_network_op(
+    retries: int = 3,
+    delay: float = 1.0,
+    backoff: float = 2.0,
+    exceptions: Tuple[Type[Exception], ...] = (Exception,),
+) -> Callable:
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            current_delay = delay
+            for attempt in range(1, retries + 1):
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as e:
+                    if attempt == retries:
+                        logger.error(
+                            "Operation %s failed after %d attempts: %s",
+                            func.__name__,
+                            retries,
+                            e,
+                        )
+                        raise
+                    logger.warning(
+                        "Attempt %d/%d for %s failed: %s. Retrying in %.2fs...",
+                        attempt,
+                        retries,
+                        func.__name__,
+                        e,
+                        current_delay,
+                    )
+                    time.sleep(current_delay)
+                    current_delay *= backoff
 
-def ensure_directory(dir_path: str) -> None:
-    pathlib.Path(dir_path).mkdir(parents=True, exist_ok=True)
+        return wrapper
 
-def format_byte_size(size: int) -> str:
-    for unit in ['B', 'KB', 'MB', 'GB']:
-        if size < 1024:
-            return f"{size:.2f} {unit}"
-        size /= 1024
-    return f"{size:.2f} TB"
-
-def get_file_list(directory: str, extension: str = "*") -> list[pathlib.Path]:
-    return list(pathlib.Path(directory).glob(f"*.{extension}"))
+    return decorator
