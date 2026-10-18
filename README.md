@@ -1,46 +1,48 @@
 # automation-tool-76
 
-A lightweight, high-performance Python engine designed to streamline repetitive task execution and workflow orchestration. This tool leverages asynchronous processing to manage file operations, API requests, and data parsing with minimal resource overhead.
+A lightweight, high-performance Python framework designed to streamline repetitive task execution across local and remote environments. This tool minimizes boilerplate code for system administrators and developers looking to orchestrate complex workflows with minimal overhead.
 
 ## Features
 
-*   **Async Execution Engine:** Utilizes Python’s `asyncio` to handle concurrent tasks without blocking the main event loop.
-*   **Modular Plugin System:** Easily extend functionality by dropping custom scripts into the `plugins/` directory.
-*   **YAML Configuration:** Manage complex automation sequences through clean, human-readable configuration files.
-*   **Logging & Metrics:** Built-in integration with standard logging for real-time monitoring and failure auditing.
+*   **Task Chaining:** Easily define sequential workflows using YAML configuration files to manage dependencies between processes.
+*   **Parallel Execution:** Leverage Python’s `multiprocessing` library to run independent tasks concurrently, significantly reducing overall execution time.
+*   **Intelligent Logging:** Automated capture of stdout/stderr streams with configurable log rotation and severity filtering.
+*   **Robust Error Handling:** Built-in retry logic and configurable timeout thresholds to ensure stability during unstable network or system conditions.
 
 ## Installation
 
-Ensure you have Python 3.9 or higher installed. Clone the repository and set up your virtual environment:
+Ensure you have Python 3.8+ installed. You can install the tool directly via pip:
 
 ```bash
+# Clone the repository
 git clone https://github.com/Developer/automation-tool-76.git
 cd automation-tool-76
-python3 -m venv venv
-source venv/bin/activate
+
+# Install dependencies
 pip install -r requirements.txt
 ```
 
 ## Usage
 
-Define your task sequence in `config.yaml` and execute the tool using the following command:
+To execute a task defined in your configuration file, use the following command:
 
 ```bash
-# Basic execution
-python main.py --config config.yaml
-
-# Run in background mode with output redirection
-python main.py --config config.yaml --silent > process.log 2>&1
+python main.py --config workflows/backup_system.yaml --verbose
 ```
 
-For a list of all available commands and flags, run:
-
-```bash
-python main.py --help
+### Example Config (`workflows/backup_system.yaml`)
+```yaml
+tasks:
+  - name: sync-files
+    command: rsync -av /source /destination
+    retries: 3
+  - name: verify-integrity
+    command: ./scripts/check_checksum.sh
+    depends_on: sync-files
 ```
 
 ## License
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-This project is licensed under the terms of the MIT license. See the `LICENSE` file for details.
+Distributed under the MIT License. See `LICENSE` for more information.
