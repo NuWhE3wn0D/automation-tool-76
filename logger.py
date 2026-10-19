@@ -1,23 +1,28 @@
 import logging
-import sys
-from typing import Optional
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
-class AutomationLogger:
-    def __init__(self, name: str = "automation-tool-76", level: int = logging.INFO):
-        self.logger = logging.getLogger(name)
-        self.logger.setLevel(level)
-        self._setup_handler()
+LOG_FILE = Path("automation.log")
+MAX_BYTES = 5 * 1024 * 1024
+BACKUP_COUNT = 3
 
-    def _setup_handler(self) -> None:
-        handler = logging.StreamHandler(sys.stdout)
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
-        handler.setFormatter(formatter)
-        self.logger.addHandler(handler)
+def setup_logger(name: str = "automation-tool-76") -> logging.Logger:
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
 
-    def get_logger(self) -> logging.Logger:
-        return self.logger
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
 
-def setup_default_logger(name: str = "automation-tool-76") -> logging.Logger:
-    return AutomationLogger(name).get_logger()
+    file_handler = RotatingFileHandler(
+        LOG_FILE, maxBytes=MAX_BYTES, backupCount=BACKUP_COUNT
+    )
+    file_handler.setFormatter(formatter)
+
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+
+    return logger
