@@ -1,24 +1,22 @@
-import json
 import os
-from typing import Any, Dict
+from pathlib import Path
+from typing import Dict, Any
 
-DEFAULTS = {
-    "timeout": 30,
-    "retries": 3,
-    "log_level": "INFO"
-}
+class Settings:
+    def __init__(self) -> None:
+        self.base_dir = Path(__file__).resolve().parent
+        self.env = os.getenv("APP_ENV", "development")
+        self.log_level = os.getenv("LOG_LEVEL", "INFO")
+        self.max_retries = int(os.getenv("MAX_RETRIES", 3))
+        self.timeout = float(os.getenv("TIMEOUT", 30.0))
 
-def load_config(filepath: str) -> Dict[str, Any]:
-    config = DEFAULTS.copy()
-    if os.path.exists(filepath):
-        try:
-            with open(filepath, "r") as f:
-                user_config = json.load(f)
-                config.update(user_config)
-        except (json.JSONDecodeError, IOError):
-            pass
-    return config
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "env": self.env,
+            "log_level": self.log_level,
+            "max_retries": self.max_retries,
+            "timeout": self.timeout
+        }
 
-def get_setting(key: str, filepath: str = "config.json") -> Any:
-    config = load_config(filepath)
-    return config.get(key, DEFAULTS.get(key))
+def get_config() -> Settings:
+    return Settings()
