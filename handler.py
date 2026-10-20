@@ -1,31 +1,24 @@
-import logging
-from typing import Dict, Any, Optional
+import sys
 
-logger = logging.getLogger(__name__)
+def validate_input(data):
+    if not isinstance(data, dict):
+        raise ValueError("input must be a dictionary")
+    if "task_id" not in data or not isinstance(data["task_id"], int):
+        raise ValueError("missing or invalid task_id")
+    return True
 
-class AutomationHandler:
-    def __init__(self, config: Dict[str, Any]):
-        self.config = config
-        self.active_tasks = {}
-
-    def execute(self, task_id: str, payload: Optional[Dict] = None) -> bool:
+def process_stream(stream):
+    for entry in stream:
         try:
-            if task_id in self.active_tasks:
-                return False
-            self.active_tasks[task_id] = payload or {}
-            self._process(task_id)
-            return True
-        except Exception as e:
-            logger.error(f"Task {task_id} failed: {e}")
-            return False
+            if validate_input(entry):
+                execute_task(entry)
+        except (ValueError, TypeError) as e:
+            print(f"skip malformed input: {e}", file=sys.stderr)
+            continue
 
-    def _process(self, task_id: str) -> None:
-        data = self.active_tasks.pop(task_id)
-        logger.info(f"Processing task {task_id} with {data}")
+def execute_task(task):
+    print(f"processing task {task['task_id']}")
 
-    def cleanup(self) -> None:
-        self.active_tasks.clear()
-        logger.info("Handler state reset")
-
-def get_handler(config: Dict[str, Any]) -> AutomationHandler:
-    return AutomationHandler(config)
+if __name__ == "__main__":
+    mock_data = [{"task_id": 1}, "invalid", {"task_id": 2}]
+    process_stream(mock_data)
