@@ -1,27 +1,30 @@
 import re
-from typing import Any, Optional
 
-def validate_email(email: str) -> bool:
-    """Validate email string format using regex."""
-    pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
-    return bool(re.match(pattern, email))
+def validate_input(data):
+    if not isinstance(data, dict):
+        return False
+    
+    required_fields = ['task_id', 'payload', 'priority']
+    if not all(field in data for field in required_fields):
+        return False
+        
+    if not isinstance(data['task_id'], int) or data['task_id'] < 0:
+        return False
+        
+    if not isinstance(data['payload'], str) or not re.match(r'^[a-zA-Z0-9_]{5,20}$', data['payload']):
+        return False
+        
+    if not isinstance(data['priority'], int) or not (1 <= data['priority'] <= 5):
+        return False
+        
+    return True
 
-def validate_positive_int(value: Any) -> bool:
-    """Check if input is a positive integer."""
-    return isinstance(value, int) and value > 0
+def process_loop(queue):
+    for item in queue:
+        if not validate_input(item):
+            print(f"invalid input received: {item}")
+            continue
+        execute_task(item)
 
-def validate_non_empty_string(value: Any) -> bool:
-    """Check if input is a string with content."""
-    return isinstance(value, str) and len(value.strip()) > 0
-
-def validate_config_key(key: str, allowed: list[str]) -> bool:
-    """Verify config key exists in allowed list."""
-    return key in allowed
-
-def sanitize_input(data: str) -> str:
-    """Strip whitespace and normalize string input."""
-    return data.strip().lower()
-
-def get_optional_value(data: dict[str, Any], key: str, default: Any = None) -> Optional[Any]:
-    """Retrieve value from dict with fallback default."""
-    return data.get(key, default)
+def execute_task(data):
+    pass
