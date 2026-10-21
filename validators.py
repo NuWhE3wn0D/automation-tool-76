@@ -1,30 +1,29 @@
 import re
+from typing import Any, Optional
 
-def validate_input(data):
-    if not isinstance(data, dict):
+def validate_email(email: str) -> bool:
+    """Validate email string format using regex."""
+    pattern = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
+    return bool(re.match(pattern, email))
+
+def validate_integer(value: Any, min_val: Optional[int] = None, max_val: Optional[int] = None) -> bool:
+    """Validate if value is int and within optional bounds."""
+    if not isinstance(value, int):
         return False
-    
-    required_fields = ['task_id', 'payload', 'priority']
-    if not all(field in data for field in required_fields):
+    if min_val is not None and value < min_val:
         return False
-        
-    if not isinstance(data['task_id'], int) or data['task_id'] < 0:
+    if max_val is not None and value > max_val:
         return False
-        
-    if not isinstance(data['payload'], str) or not re.match(r'^[a-zA-Z0-9_]{5,20}$', data['payload']):
-        return False
-        
-    if not isinstance(data['priority'], int) or not (1 <= data['priority'] <= 5):
-        return False
-        
     return True
 
-def process_loop(queue):
-    for item in queue:
-        if not validate_input(item):
-            print(f"invalid input received: {item}")
-            continue
-        execute_task(item)
+def validate_required(value: Any) -> bool:
+    """Check if input is not None and not empty."""
+    if value is None:
+        return False
+    if isinstance(value, (str, list, dict)) and not value:
+        return False
+    return True
 
-def execute_task(data):
-    pass
+def sanitize_input(value: str) -> str:
+    """Remove non-alphanumeric characters from input string."""
+    return re.sub(r'[^a-zA-Z0-9]', '', value)
