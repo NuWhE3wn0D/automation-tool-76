@@ -2,19 +2,27 @@ class AutomationError(Exception):
     """Base exception for automation-tool-76."""
 
 class ConfigurationError(AutomationError):
-    """Raised when configuration values are invalid."""
+    """Raised when configuration validation fails."""
+
+class ConnectionTimeout(AutomationError):
+    """Raised when external services exceed timeout."""
+
+class ResourceNotFoundError(AutomationError):
+    """Raised when a required resource is missing."""
 
 class ValidationError(AutomationError):
-    """Raised when input validation fails."""
+    """Raised when input data fails schema validation."""
 
-class ProcessingError(AutomationError):
-    """Raised during unexpected processing state."""
+def handle_automation_error(error: Exception) -> None:
+    if isinstance(error, (ConfigurationError, ValidationError)):
+        print(f"Critical input error: {error}")
+    elif isinstance(error, ConnectionTimeout):
+        print(f"Retrying connection due to: {error}")
+    else:
+        print(f"Unexpected system failure: {error}")
 
-def raise_if_invalid(condition: bool, message: str) -> None:
-    """Validate conditions and raise exception if False."""
-    if not condition:
-        raise ValidationError(message)
-
-def handle_exception(exc: Exception) -> str:
-    """Format exception message for logging."""
-    return f"[{type(exc).__name__}] {str(exc)}"
+def validate_resource(resource: any) -> None:
+    if resource is None:
+        raise ResourceNotFoundError("Required resource is null")
+    if not isinstance(resource, dict):
+        raise ValidationError("Invalid resource format provided")
