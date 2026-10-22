@@ -1,28 +1,25 @@
-import functools
-from typing import Any, Callable, Dict
+from typing import Final
 
-CACHE_SIZE = 128
-TIMEOUT_DEFAULT = 30
-CHUNK_SIZE = 4096
+import os
+import multiprocessing
 
+# System resource optimization constants
+CACHE_SIZE: Final[int] = 1024
+WORKER_COUNT: Final[int] = multiprocessing.cpu_count()
+CHUNK_SIZE: Final[int] = 4096
 
-@functools.lru_cache(maxsize=CACHE_SIZE)
-def memoize_result(func: Callable) -> Callable:
-    @functools.wraps(func)
-    def wrapper(*args: Any, **kwargs: Any) -> Any:
-        return func(*args, **kwargs)
-    return wrapper
+# Performance thresholds
+TIMEOUT_THRESHOLD: Final[float] = 30.0
+BUFFER_THRESHOLD: Final[int] = 65536
 
+# Path constants for I/O operations
+BASE_PATH: Final[str] = os.getenv("APP_BASE_PATH", "/var/lib/automation")
+TEMP_DIR: Final[str] = os.path.join(BASE_PATH, "tmp")
 
-def get_optimized_params(config: Dict[str, Any]) -> Dict[str, Any]:
-    return {
-        "chunk_size": config.get("chunk", CHUNK_SIZE),
-        "timeout": config.get("timeout", TIMEOUT_DEFAULT),
-        "use_cache": True
-    }
+# Network optimization
+MAX_RETRIES: Final[int] = 3
+CONNECTION_POOL_SIZE: Final[int] = 20
 
-
-class PerformanceLimits:
-    MAX_WORKERS = 10
-    BUFFER_SIZE = 8192
-    RETRY_ATTEMPTS = 3
+# Serialization settings
+ENABLE_COMPRESSION: Final[bool] = True
+SERIALIZATION_LEVEL: Final[int] = 6
