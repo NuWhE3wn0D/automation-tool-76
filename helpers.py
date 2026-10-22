@@ -1,27 +1,28 @@
-import re
+import json
+from typing import Any, Dict, Optional
 
 
-def validate_input(data: dict) -> bool:
-    required_keys = {'task_id', 'payload', 'priority'}
-    if not isinstance(data, dict) or not required_keys.issubset(data.keys()):
-        return False
-    if not isinstance(data['task_id'], int) or data['task_id'] < 0:
-        return False
-    if not isinstance(data['payload'], str) or len(data['payload']) == 0:
-        return False
-    if not isinstance(data['priority'], int) or not (1 <= data['priority'] <= 5):
-        return False
-    return True
+def load_json_file(path: str) -> Dict[str, Any]:
+    """Load and parse a JSON configuration file."""
+    with open(path, 'r', encoding='utf-8') as f:
+        return json.load(f)
 
 
-def sanitize_payload(payload: str) -> str:
-    return re.sub(r'[^a-zA-Z0-9\s]', '', payload).strip()
+def format_output(data: Any, indent: int = 4) -> str:
+    """Convert dictionary object to formatted JSON string."""
+    return json.dumps(data, indent=indent)
 
 
-def process_loop(items: list):
-    processed = []
-    for item in items:
-        if validate_input(item):
-            item['payload'] = sanitize_payload(item['payload'])
-            processed.append(item)
-    return processed
+def validate_key(data: Dict[str, Any], key: str) -> Optional[Any]:
+    """Retrieve value from dictionary if key exists."""
+    return data.get(key)
+
+
+def sanitize_input(value: str) -> str:
+    """Remove trailing whitespace and normalize string casing."""
+    return value.strip().lower()
+
+
+def batch_process(items: list, chunk_size: int = 10) -> list:
+    """Split a list into smaller chunks for processing."""
+    return [items[i:i + chunk_size] for i in range(0, len(items), chunk_size)]
