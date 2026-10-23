@@ -1,44 +1,33 @@
-import logging
-from typing import Any, Dict, List, Tuple
-
-logger = logging.getLogger(__name__)
-
-
-class ValidationError(Exception):
-    pass
+from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
+from typing import Any, Callable, Dict, Iterable, List
 
 
-def validate_item(item: Dict[str, Any]) -> None:
-    if not isinstance(item, dict):
-        raise ValidationError("Item must be a dictionary")
+class CoreEngine:
+    def __init__(self, max_workers: int = 4, cache_size: int = 128) -> None:
+        self.max_workers = max_workers
+        self._cache_size = cache_size
+        self._compiled_tasks: Dict[str, Callable[..., Any]] = {}
 
-    required_fields = ["id", "action", "payload"]
-    for field in required_fields:
-        if field not in item:
-            raise ValidationError(f"Missing required field: {field}")
+    def register_task(self, name: str, fn: Callable[..., Any]) -> None:
+        self._compiled_tasks[name] = lru_cache(maxsize=self._cache_size)(fn)
 
-    if not isinstance(item["id"], (int, str)) or not str(item["id"]).strip():
-        raise ValidationError("Invalid or empty 'id'")
+    def execute_cached(self, name: str, *args: Any) -> Any:
+        if name not in self._compiled_tasks:
+            raise KeyError(f"Task '{name}' is not registered")
+        return self._compiled_tasks[name](*args)
 
-    if not isinstance(item["payload"], dict):
-        raise ValidationError("Field 'payload' must be a dictionary")
+    def process_batch(self, name: str, items: Iterable[Any]) -> List[Any]:
+        if name not in self._compiled_tasks:
+            raise KeyError(f"Task '{name}' is not registered")
+        task = self._compiled_tasks[name]
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            return list(executor.map(task, items))
 
-
-def process_loop(items: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-    processed = []
-    failed = []
-
-    for index, item in enumerate(items):
-        try:
-            validate_item(item)
-            result = {
-                "id": item["id"],
-                "status": "success",
-                "output": f"Processed {item['action']}",
-            }
-            processed.append(result)
-        except ValidationError as err:
-            logger.warning("Validation failed at index %d: %s", index, err)
-            failed.append({"item": item, "error": str(err)})
-
-    return processed, failed
+    def clear_cache(self, name: str | None = None) -> None:
+        if name:
+            if name in self._compiled_tasks:
+                self._compiled_tasks[name].cache_clear()
+        else:
+            for fn in self._compiled_tasks.values():
+                fn.cache_clear()
