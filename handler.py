@@ -1,24 +1,35 @@
-import sys
+import functools
+from typing import Callable, Any
+from collections import deque
 
-def validate_input(data):
-    if not isinstance(data, dict):
-        raise ValueError("input must be a dictionary")
-    if "task_id" not in data or not isinstance(data["task_id"], int):
-        raise ValueError("missing or invalid task_id")
-    return True
+class DataHandler:
+    def __init__(self, cache_size: int = 1000):
+        self._cache = {}
+        self._keys = deque(maxlen=cache_size)
 
-def process_stream(stream):
-    for entry in stream:
-        try:
-            if validate_input(entry):
-                execute_task(entry)
-        except (ValueError, TypeError) as e:
-            print(f"skip malformed input: {e}", file=sys.stderr)
-            continue
+    def memoize(self, func: Callable) -> Callable:
+        @functools.wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            key = (args, frozenset(kwargs.items()))
+            if key not in self._cache:
+                if len(self._keys) == self._keys.maxlen:
+                    oldest = self._keys.popleft()
+                    del self._cache[oldest]
+                self._cache[key] = func(*args, **kwargs)
+                self._keys.append(key)
+            return self._cache[key]
+        return wrapper
 
-def execute_task(task):
-    print(f"processing task {task['task_id']}")
+    def batch_process(self, items: list, chunk_size: int = 100) -> list:
+        return [items[i:i + chunk_size] for i in range(0, len(items), chunk_size)]
 
-if __name__ == "__main__":
-    mock_data = [{"task_id": 1}, "invalid", {"task_id": 2}]
-    process_stream(mock_data)
+def optimized_compute(data: list) -> float:
+    return sum(map(lambda x: x * 1.05, data))
+
+if __name__ == '__main__':
+    handler = DataHandler()
+    @handler.memoize
+    def expensive_calc(val: int) -> int:
+        return sum(i for i in range(val))
+    
+    result = expensive_calc(100000)
