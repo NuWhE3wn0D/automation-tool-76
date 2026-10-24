@@ -1,28 +1,34 @@
 import logging
-from logging.handlers import RotatingFileHandler
-from pathlib import Path
+import sys
+from typing import Optional
 
-LOG_FILE = Path("automation.log")
-MAX_BYTES = 5 * 1024 * 1024
-BACKUP_COUNT = 3
 
-def setup_logger(name: str = "automation-tool-76") -> logging.Logger:
+def setup_logger(name: str, level: int = logging.INFO) -> logging.Logger:
     logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(level)
 
     formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
 
-    file_handler = RotatingFileHandler(
-        LOG_FILE, maxBytes=MAX_BYTES, backupCount=BACKUP_COUNT
-    )
-    file_handler.setFormatter(formatter)
-
-    console_handler = logging.StreamHandler()
+    console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(formatter)
-
-    logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
+    
+    if not logger.handlers:
+        logger.addHandler(console_handler)
 
     return logger
+
+
+def log_execution_time(func):
+    import time
+    import functools
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        start = time.perf_counter()
+        result = func(*args, **kwargs)
+        end = time.perf_counter()
+        logging.info(f'{func.__name__} executed in {end - start:.4f}s')
+        return result
+    return wrapper
