@@ -1,29 +1,26 @@
 import time
-import functools
-import logging
-from typing import Callable, Any, Type
+from typing import Any, Callable, Dict, Optional
 
-logger = logging.getLogger(__name__)
-
-def retry_on_failure(exceptions: tuple[Type[Exception], ...], max_retries: int = 3, delay: float = 1.0) -> Callable:
+def retry(attempts: int = 3, delay: float = 1.0) -> Callable:
+    """Decorator for retrying functions upon failure."""
     def decorator(func: Callable) -> Callable:
-        @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
-            last_exception = None
-            for attempt in range(max_retries):
+            last_ex: Optional[Exception] = None
+            for _ in range(attempts):
                 try:
                     return func(*args, **kwargs)
-                except exceptions as e:
-                    last_exception = e
-                    logger.warning(f"Attempt {attempt + 1} failed: {e}. Retrying...")
-                    time.sleep(delay * (2 ** attempt))
-            raise last_exception
+                except Exception as e:
+                    last_ex = e
+                    time.sleep(delay)
+            raise last_ex if last_ex else Exception("Retry failed")
         return wrapper
     return decorator
 
-@retry_on_failure((ConnectionError, TimeoutError), max_retries=3)
-def fetch_data(url: str) -> str:
-    import requests
-    response = requests.get(url, timeout=5)
-    response.raise_for_status()
-    return response.text
+def format_payload(data: Dict[str, Any]) -> str:
+    """Converts dictionary data into a clean string format."""
+    items = [f"{k}: {v}" for k, v in data.items()]
+    return " | ".join(items)
+
+def validate_input(value: Optional[str]) -> bool:
+    """Checks if provided input is non-empty."""
+    return bool(value and value.strip())
