@@ -1,21 +1,29 @@
-import time
-import functools
-from typing import Callable, Any
+import json
+import logging
+from typing import Any, Dict, Optional
 
-class NetworkRetryError(Exception):
-    pass
+logger = logging.getLogger(__name__)
 
-def retry_network_operation(max_retries: int = 3, delay: float = 1.0):
-    def decorator(func: Callable):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> Any:
-            last_exception = None
-            for attempt in range(max_retries):
-                try:
-                    return func(*args, **kwargs)
-                except (ConnectionError, TimeoutError) as e:
-                    last_exception = e
-                    time.sleep(delay * (2 ** attempt))
-            raise NetworkRetryError(f"Failed after {max_retries} attempts: {last_exception}")
-        return wrapper
-    return decorator
+def load_json(filepath: str) -> Optional[Dict[str, Any]]:
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except (IOError, json.JSONDecodeError) as e:
+        logger.error(f'failed to load {filepath}: {e}')
+        return None
+
+def save_json(data: Dict[str, Any], filepath: str) -> bool:
+    try:
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+        return True
+    except IOError as e:
+        logger.error(f'failed to save {filepath}: {e}')
+        return False
+
+def sanitize_data(data: Any) -> Any:
+    if isinstance(data, dict):
+        return {str(k): sanitize_data(v) for k, v in data.items()}
+    if isinstance(data, list):
+        return [sanitize_data(i) for i in data]
+    return str(data) if data is not None else None
