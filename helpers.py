@@ -1,35 +1,60 @@
-import logging
-from typing import Any, Callable, Optional
+import time
+from functools import wraps
+from typing import Any, Callable, Dict, Generator, Iterable, Tuple, Type
 
-logger = logging.getLogger(__name__)
 
-class AutomationError(Exception):
-    pass
+def retry(
+    times: int = 3,
+    delay: float = 1.0,
+    backoff: float = 2.0,
+    exceptions: Tuple[Type[Exception], ...] = (Exception,),
+) -> Callable:
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            current_delay = delay
+            for attempt in range(1, times + 1):
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as e:
+                    if attempt == times:
+                        raise e
+                    time.sleep(current_delay)
+                    current_delay *= backoff
 
-def safe_execute(func: Callable, *args: Any, **kwargs: Any) -> Optional[Any]:
+        return wrapper
+
+    return decorator
+
+
+def chunk_iterable(iterable: Iterable, size: int) -> Generator[list, None, None]:
+    batch = []
+    for item in iterable:
+        batch.append(item)
+        if len(batch) == size:
+            yield batch
+            batch = []
+    if batch:
+        yield batch
+
+
+def flatten_dict(
+    d: Dict[str, Any], parent_key: str = "", sep: str = "."
+) -> Dict[str, Any]:
+    items: list = []
+    for k, v in d.items():
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, dict):
+            items.extend(flatten_dict(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
+
+
+def safe_execute(
+    func: Callable, default: Any = None, *args: Any, **kwargs: Any
+) -> Any:
     try:
         return func(*args, **kwargs)
-    except (ValueError, TypeError) as e:
-        logger.error(f"invalid input data: {e}")
-    except ConnectionError as e:
-        logger.critical(f"connection failure during execution: {e}")
-    except Exception as e:
-        logger.exception(f"unexpected system error: {e}")
-    return None
-
-def validate_payload(data: Any) -> bool:
-    if data is None:
-        return False
-    if not isinstance(data, dict):
-        return False
-    return bool(data)
-
-def retry_operation(func: Callable, retries: int = 3, *args: Any) -> Any:
-    last_err = None
-    for attempt in range(retries):
-        try:
-            return func(*args)
-        except Exception as e:
-            last_err = e
-            logger.warning(f"attempt {attempt + 1} failed: {e}")
-    raise AutomationError(f"operation failed after {retries} attempts: {last_err}")
+    except Exception:
+        return default
