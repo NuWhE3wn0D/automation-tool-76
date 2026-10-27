@@ -1,48 +1,44 @@
-import logging
-from typing import Any, Dict, List
-
-logger = logging.getLogger(__name__)
+from typing import Any, Callable, Dict, List, Optional
 
 
-class ValidationError(Exception):
-    pass
+class BatchProcessor:
+    def __init__(self, batch_size: int = 100) -> None:
+        self.batch_size = max(1, batch_size)
+        self._hooks: List[Callable[[List[Any]], List[Any]]] = []
+
+    def register_hook(self, hook: Callable[[List[Any]], List[Any]]) -> None:
+        if callable(hook):
+            self._hooks.append(hook)
+
+    def _apply_hooks(self, chunk: List[Any]) -> List[Any]:
+        result = chunk
+        for hook in self._hooks:
+            result = hook(result)
+        return result
+
+    def process(self, items: List[Any]) -> List[Any]:
+        if not items:
+            return []
+
+        processed: List[Any] = []
+        for i in range(0, len(items), self.batch_size):
+            chunk = items[i : i + self.batch_size]
+            transformed = self._apply_hooks(chunk)
+            processed.extend(transformed)
+
+        return processed
 
 
-def validate_input(data: Dict[str, Any]) -> Dict[str, Any]:
-    if not isinstance(data, dict):
-        raise ValidationError("Input item must be a dictionary")
-    required_fields = ["id", "action", "payload"]
-    missing = [f for f in required_fields if f not in data]
-    if missing:
-        raise ValidationError(f"Missing required fields: {', '.join(missing)}")
-    if not isinstance(data["id"], (int, str)) or not str(data["id"]).strip():
-        raise ValidationError("Field 'id' must be a non-empty string or integer")
-    if not isinstance(data["action"], str) or not data["action"].strip():
-        raise ValidationError("Field 'action' must be a non-empty string")
-    if not isinstance(data["payload"], dict):
-        raise ValidationError("Field 'payload' must be a dictionary")
-    return data
+def sanitize_record(record: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        k.strip().lower(): (v.strip() if isinstance(v, str) else v)
+        for k, v in record.items()
+        if k is not None
+    }
 
 
-def process_items(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    results = []
-    for index, raw_item in enumerate(items):
-        try:
-            validated = validate_input(raw_item)
-            processed_item = {
-                "item_id": validated["id"],
-                "status": "success",
-                "action": validated["action"].lower(),
-                "result": validated["payload"],
-            }
-            results.append(processed_item)
-        except ValidationError as err:
-            logger.warning(f"Skipping invalid item at index {index}: {err}")
-            results.append(
-                {
-                    "item_id": raw_item.get("id") if isinstance(raw_item, dict) else None,
-                    "status": "failed",
-                    "error": str(err),
-                }
-            )
-    return results
+def filter_empty_values(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    return [
+        {k: v for k, v in item.items() if v is not None and v != ""}
+        for item in items
+    ]
