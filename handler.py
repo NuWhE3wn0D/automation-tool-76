@@ -1,34 +1,55 @@
-from typing import Dict, Any, Optional
+import json
 import logging
+import time
+from typing import Any, Callable, Dict, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
-class DataHandler:
-    def __init__(self, config: Dict[str, Any]) -> None:
-        self.config = config
-        self.buffer: list[Any] = []
 
-    def process_payload(self, data: Dict[str, Any]) -> bool:
-        """Validates and stores incoming payload data."""
-        if not data or "id" not in data:
-            logger.error("Invalid payload format")
-            return False
-        self.buffer.append(data)
-        return True
+class TaskExecutionError(Exception):
+    def __init__(self, message: str, payload: Optional[Dict[str, Any]] = None):
+        super().__init__(message)
+        self.payload = payload or {}
 
-    def get_batch(self, limit: int = 10) -> list[Dict[str, Any]]:
-        """Retrieves a batch of processed items."""
-        batch = self.buffer[:limit]
-        self.buffer = self.buffer[limit:]
-        return batch
 
-    def flush(self) -> None:
-        """Clears the internal processing buffer."""
-        self.buffer.clear()
+class TaskHandler:
+    def __init__(self, max_retries: int = 3, backoff_factor: float = 0.5):
+        self.max_retries = max(0, max_retries)
+        self.backoff_factor = max(0.0, backoff_factor)
 
-    def status_report(self) -> Dict[str, Any]:
-        """Returns current handler operational statistics."""
-        return {
-            "pending_count": len(self.buffer),
-            "is_active": True
-        }
+    def safe_parse_payload(self, raw_data: Any) -> Dict[str, Any]:
+        if isinstance(raw_data, dict):
+            return raw_data
+        if not isinstance(raw_data, (str, bytes)):
+            raise TaskExecutionError(f"Unsupported payload type: {type(raw_data).__name__}")
+        try:
+            parsed = json.loads(raw_data)
+            if not isinstance(parsed, dict):
+                raise TaskExecutionError("Payload standard must deserialize to a dictionary")
+            return parsed
+        except (json.JSONDecodeError, TypeError) as err:
+            raise TaskExecutionError(f"Malformed JSON payload: {err}") from err
+
+    def execute_with_retry(self, func: Callable[..., Any], payload: Any) -> Tuple[bool, Any]:
+        try:
+            parsed_payload = self.safe_parse_payload(payload)
+        except TaskExecutionError as err:
+            logger.error("Invalid execution payload: %s", err)
+            return False, str(err)
+
+        attempts = 0
+        while attempts <= self.max_retries:
+            try:
+                result = func(parsed_payload)
+                return True, result
+            except (TimeoutError, ConnectionError) as err:
+                attempts += 1
+                if attempts > self.max_retries:
+                    logger.error("Max retries exceeded for transient error: %s", err)
+                    return False, str(err)
+                time.sleep(self.backoff_factor * (2 ** (attempts - 1)))
+            except Exception as err:
+                logger.error("Unhandled execution exception: %s", err, exc_info=True)
+                return False, str(err)
+
+        return False, "Execution failed"
