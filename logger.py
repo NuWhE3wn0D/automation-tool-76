@@ -1,34 +1,44 @@
 import logging
 import sys
+from pathlib import Path
 from typing import Optional
 
 
-def setup_logger(name: str, level: int = logging.INFO) -> logging.Logger:
+class DetailedFormatter(logging.Formatter):
+    fmt = "%(asctime)s | %(levelname)-8s | %(name)s:%(funcName)s:%(lineno)d - %(message)s"
+    datefmt = "%Y-%m-%d %H:%M:%S"
+
+    def __init__(self) -> None:
+        super().__init__(fmt=self.fmt, datefmt=self.datefmt)
+
+
+def setup_logger(
+    name: str = "automation",
+    level: int = logging.INFO,
+    log_file: Optional[Path] = None,
+    console: bool = True,
+) -> logging.Logger:
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
+    if logger.handlers:
+        return logger
 
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(formatter)
-    
-    if not logger.handlers:
+    formatter = DetailedFormatter()
+
+    if console:
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
+
+    if log_file:
+        log_file.parent.mkdir(parents=True, exist_ok=True)
+        file_handler = logging.FileHandler(log_file, encoding="utf-8")
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
 
     return logger
 
 
-def log_execution_time(func):
-    import time
-    import functools
-
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        start = time.perf_counter()
-        result = func(*args, **kwargs)
-        end = time.perf_counter()
-        logging.info(f'{func.__name__} executed in {end - start:.4f}s')
-        return result
-    return wrapper
+def get_logger(name: str = "automation") -> logging.Logger:
+    return logging.getLogger(name)
