@@ -1,23 +1,49 @@
 import json
 import os
-from typing import Any, Dict, Optional
+import time
+from typing import Any, Callable, Dict, Optional, TypeVar
 
-def load_json(filepath: str) -> Dict[str, Any]:
-    if not os.path.exists(filepath):
-        return {}
-    with open(filepath, 'r') as f:
-        return json.load(f)
+T = TypeVar("T")
 
-def save_json(data: Dict[str, Any], filepath: str) -> None:
-    with open(filepath, 'w') as f:
-        json.dump(data, f, indent=4)
 
-def get_env_variable(key: str, default: Optional[str] = None) -> str:
-    return os.environ.get(key, default) or ''
+def safe_json_load(
+    file_path: str, default: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    if not file_path or not os.path.exists(file_path):
+        return default if default is not None else {}
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data if isinstance(data, dict) else (default or {})
+    except (json.JSONDecodeError, OSError, PermissionError):
+        return default if default is not None else {}
 
-def ensure_directory(path: str) -> None:
-    if not os.path.exists(path):
-        os.makedirs(path)
 
-def format_log_entry(level: str, message: str) -> str:
-    return f"[{level.upper()}] {message}"
+def safe_get(
+    data: Dict[str, Any], keys: list[str], default: Any = None
+) -> Any:
+    curr = data
+    for key in keys:
+        if not isinstance(curr, dict) or key not in curr:
+            return default
+        curr = curr[key]
+    return curr
+
+
+def retry_on_exception(
+    func: Callable[..., T],
+    retries: int = 3,
+    delay: float = 1.0,
+    backoff: float = 2.0,
+    exceptions: tuple[type[BaseException], ...] = (Exception,),
+) -> Optional[T]:
+    current_delay = delay
+    for attempt in range(retries):
+        try:
+            return func()
+        except exceptions:
+            if attempt == retries - 1:
+                return None
+            time.sleep(current_delay)
+            current_delay *= backoff
+    return None
