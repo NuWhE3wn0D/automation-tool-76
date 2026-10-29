@@ -1,50 +1,45 @@
-"""Core execution engine for automation tasks."""
-
-from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Tuple
 
 
-@dataclass
-class TaskResult:
-    """Container for task execution results."""
+def validate_item(item: Any) -> Tuple[bool, str]:
+    if not isinstance(item, dict):
+        return False, "item must be a dictionary"
+    if "id" not in item or not str(item["id"]).strip():
+        return False, "missing or empty 'id' field"
+    if "task" not in item or not isinstance(item["task"], str):
+        return False, "missing or non-string 'task' field"
+    if not item["task"].strip():
+        return False, "'task' field cannot be blank"
+    return True, ""
 
-    success: bool
-    data: Optional[Dict[str, Any]] = None
-    error: Optional[str] = None
 
-
-class TaskEngine:
-    """Engine for registering and executing sequential automation tasks."""
-
+class ProcessingEngine:
     def __init__(self) -> None:
-        self._tasks: List[Callable[[], TaskResult]] = []
+        self.processed_count = 0
+        self.failed_count = 0
 
-    def register_task(self, func: Callable[[], TaskResult]) -> None:
-        """Register a new task function to the execution queue."""
-        self._tasks.append(func)
+    def run(self, payload: List[Any]) -> Dict[str, Any]:
+        results: List[Dict[str, Any]] = []
+        errors: List[Dict[str, Any]] = []
 
-    def execute_all(self, stop_on_failure: bool = True) -> List[TaskResult]:
-        """Execute all registered tasks sequentially.
+        for raw_item in payload:
+            is_valid, error_reason = validate_item(raw_item)
+            if not is_valid:
+                self.failed_count += 1
+                errors.append({"raw_input": raw_item, "reason": error_reason})
+                continue
 
-        Args:
-            stop_on_failure: Whether to halt execution if a task fails.
+            processed_entry = {
+                "id": str(raw_item["id"]).strip(),
+                "task": raw_item["task"].strip().lower(),
+                "status": "success",
+            }
+            results.append(processed_entry)
+            self.processed_count += 1
 
-        Returns:
-            List of TaskResult objects for executed tasks.
-        """
-        results: List[TaskResult] = []
-        for task in self._tasks:
-            try:
-                res = task()
-                results.append(res)
-                if stop_on_failure and not res.success:
-                    break
-            except Exception as exc:
-                results.append(TaskResult(success=False, error=str(exc)))
-                if stop_on_failure:
-                    break
-        return results
-
-    def clear(self) -> None:
-        """Clear all registered tasks."""
-        self._tasks.clear()
+        return {
+            "processed": results,
+            "errors": errors,
+            "total_processed": self.processed_count,
+            "total_failed": self.failed_count,
+        }
