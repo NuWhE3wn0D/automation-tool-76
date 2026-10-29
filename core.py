@@ -1,33 +1,50 @@
-from concurrent.futures import ThreadPoolExecutor
-from functools import lru_cache
-from typing import Any, Callable, Dict, Iterable, List
+"""Core execution engine for automation tasks."""
+
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, List, Optional
 
 
-class CoreEngine:
-    def __init__(self, max_workers: int = 4, cache_size: int = 128) -> None:
-        self.max_workers = max_workers
-        self._cache_size = cache_size
-        self._compiled_tasks: Dict[str, Callable[..., Any]] = {}
+@dataclass
+class TaskResult:
+    """Container for task execution results."""
 
-    def register_task(self, name: str, fn: Callable[..., Any]) -> None:
-        self._compiled_tasks[name] = lru_cache(maxsize=self._cache_size)(fn)
+    success: bool
+    data: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
 
-    def execute_cached(self, name: str, *args: Any) -> Any:
-        if name not in self._compiled_tasks:
-            raise KeyError(f"Task '{name}' is not registered")
-        return self._compiled_tasks[name](*args)
 
-    def process_batch(self, name: str, items: Iterable[Any]) -> List[Any]:
-        if name not in self._compiled_tasks:
-            raise KeyError(f"Task '{name}' is not registered")
-        task = self._compiled_tasks[name]
-        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            return list(executor.map(task, items))
+class TaskEngine:
+    """Engine for registering and executing sequential automation tasks."""
 
-    def clear_cache(self, name: str | None = None) -> None:
-        if name:
-            if name in self._compiled_tasks:
-                self._compiled_tasks[name].cache_clear()
-        else:
-            for fn in self._compiled_tasks.values():
-                fn.cache_clear()
+    def __init__(self) -> None:
+        self._tasks: List[Callable[[], TaskResult]] = []
+
+    def register_task(self, func: Callable[[], TaskResult]) -> None:
+        """Register a new task function to the execution queue."""
+        self._tasks.append(func)
+
+    def execute_all(self, stop_on_failure: bool = True) -> List[TaskResult]:
+        """Execute all registered tasks sequentially.
+
+        Args:
+            stop_on_failure: Whether to halt execution if a task fails.
+
+        Returns:
+            List of TaskResult objects for executed tasks.
+        """
+        results: List[TaskResult] = []
+        for task in self._tasks:
+            try:
+                res = task()
+                results.append(res)
+                if stop_on_failure and not res.success:
+                    break
+            except Exception as exc:
+                results.append(TaskResult(success=False, error=str(exc)))
+                if stop_on_failure:
+                    break
+        return results
+
+    def clear(self) -> None:
+        """Clear all registered tasks."""
+        self._tasks.clear()
