@@ -2,30 +2,29 @@ import json
 import os
 from typing import Any, Dict
 
+DEFAULT_CONFIG = {
+    "log_level": "INFO",
+    "timeout": 30,
+    "retry_count": 3
+}
+
 class ConfigLoader:
-    DEFAULTS = {
-        "port": 8080,
-        "host": "127.0.0.1",
-        "debug": False
-    }
+    def __init__(self, config_path: str = "config.json"):
+        self.config_path = config_path
+        self.config = DEFAULT_CONFIG.copy()
 
-    def __init__(self, filepath: str = "config.json"):
-        self.filepath = filepath
-        self.config = self.DEFAULTS.copy()
-        self._load()
+    def load(self) -> Dict[str, Any]:
+        if not os.path.exists(self.config_path):
+            return self.config
 
-    def _load(self) -> None:
-        if os.path.exists(self.filepath):
-            try:
-                with open(self.filepath, "r") as f:
-                    user_config = json.load(f)
-                    self.config.update(user_config)
-            except (json.JSONDecodeError, IOError):
-                pass
+        try:
+            with open(self.config_path, "r") as f:
+                user_config = json.load(f)
+                self.config.update(user_config)
+        except (json.JSONDecodeError, IOError):
+            pass
+
+        return self.config
 
     def get(self, key: str, default: Any = None) -> Any:
         return self.config.get(key, default)
-
-    @property
-    def all(self) -> Dict[str, Any]:
-        return self.config
