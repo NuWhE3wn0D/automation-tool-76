@@ -1,29 +1,42 @@
-import json
-import logging
-from typing import Any, Dict, Optional
+from pathlib import Path
+import re
+import shutil
+from typing import Any, Dict, Generator, List
 
-logger = logging.getLogger(__name__)
 
-def load_json(filepath: str) -> Optional[Dict[str, Any]]:
-    try:
-        with open(filepath, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except (IOError, json.JSONDecodeError) as e:
-        logger.error(f'failed to load {filepath}: {e}')
-        return None
+def sanitize_filename(name: str, replacement: str = "_") -> str:
+    clean_name = re.sub(r'[\\/*?:"<>|]', replacement, name)
+    return clean_name.strip()
 
-def save_json(data: Dict[str, Any], filepath: str) -> bool:
-    try:
-        with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=4, ensure_ascii=False)
+
+def ensure_directory(path: Path | str) -> Path:
+    dir_path = Path(path)
+    dir_path.mkdir(parents=True, exist_ok=True)
+    return dir_path
+
+
+def remove_tree_if_exists(path: Path | str) -> bool:
+    target = Path(path)
+    if target.exists():
+        if target.is_dir():
+            shutil.rmtree(target)
+        else:
+            target.unlink()
         return True
-    except IOError as e:
-        logger.error(f'failed to save {filepath}: {e}')
-        return False
+    return False
 
-def sanitize_data(data: Any) -> Any:
-    if isinstance(data, dict):
-        return {str(k): sanitize_data(v) for k, v in data.items()}
-    if isinstance(data, list):
-        return [sanitize_data(i) for i in data]
-    return str(data) if data is not None else None
+
+def chunk_iterable(iterable: List[Any], chunk_size: int) -> Generator[List[Any], None, None]:
+    for i in range(0, len(iterable), chunk_size):
+        yield iterable[i : i + chunk_size]
+
+
+def flatten_dict(data: Dict[str, Any], parent_key: str = "", sep: str = ".") -> Dict[str, Any]:
+    items: List[tuple] = []
+    for key, value in data.items():
+        new_key = f"{parent_key}{sep}{key}" if parent_key else key
+        if isinstance(value, dict):
+            items.extend(flatten_dict(value, new_key, sep=sep).items())
+        else:
+            items.append((new_key, value))
+    return dict(items)
