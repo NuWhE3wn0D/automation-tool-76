@@ -1,28 +1,24 @@
 import json
-import os
+from pathlib import Path
 from typing import Any, Dict
 
-class ConfigLoader:
-    def __init__(self, default_config: Dict[str, Any], config_path: str = "config.json"):
-        self.config_path = config_path
-        self.config = default_config
-        self._load()
+DEFAULT_CONFIG = {
+    "log_level": "INFO",
+    "timeout": 30,
+    "retry_attempts": 3
+}
 
-    def _load(self) -> None:
-        if os.path.exists(self.config_path):
-            try:
-                with open(self.config_path, "r") as f:
-                    user_config = json.load(f)
-                    self.config.update(user_config)
-            except (json.JSONDecodeError, IOError):
-                pass
+def load_config(path: str = "config.json") -> Dict[str, Any]:
+    config = DEFAULT_CONFIG.copy()
+    config_path = Path(path)
 
-    def get(self, key: str, default: Any = None) -> Any:
-        return self.config.get(key, default)
+    if config_path.exists():
+        with open(config_path, "r") as f:
+            user_config = json.load(f)
+            config.update(user_config)
 
-    def save(self) -> None:
-        with open(self.config_path, "w") as f:
-            json.dump(self.config, f, indent=4)
+    return config
 
-def load_settings(defaults: Dict[str, Any], path: str = "config.json") -> ConfigLoader:
-    return ConfigLoader(defaults, path)
+def get_config_value(key: str, default: Any = None) -> Any:
+    config = load_config()
+    return config.get(key, default)
