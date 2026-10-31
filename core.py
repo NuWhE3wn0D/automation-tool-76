@@ -1,45 +1,31 @@
-from typing import Any, Dict, List, Tuple
+import time
+import functools
+import logging
+from typing import Callable, Any
 
+logger = logging.getLogger(__name__)
 
-def validate_item(item: Any) -> Tuple[bool, str]:
-    if not isinstance(item, dict):
-        return False, "item must be a dictionary"
-    if "id" not in item or not str(item["id"]).strip():
-        return False, "missing or empty 'id' field"
-    if "task" not in item or not isinstance(item["task"], str):
-        return False, "missing or non-string 'task' field"
-    if not item["task"].strip():
-        return False, "'task' field cannot be blank"
-    return True, ""
+def retry(exceptions: tuple = (Exception,), retries: int = 3, delay: float = 1.0):
+    def decorator(func: Callable):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs) -> Any:
+            last_exception = None
+            for attempt in range(retries):
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as e:
+                    last_exception = e
+                    logger.warning(f"Attempt {attempt + 1} failed: {e}")
+                    if attempt < retries - 1:
+                        time.sleep(delay)
+            raise last_exception
+        return wrapper
+    return decorator
 
-
-class ProcessingEngine:
-    def __init__(self) -> None:
-        self.processed_count = 0
-        self.failed_count = 0
-
-    def run(self, payload: List[Any]) -> Dict[str, Any]:
-        results: List[Dict[str, Any]] = []
-        errors: List[Dict[str, Any]] = []
-
-        for raw_item in payload:
-            is_valid, error_reason = validate_item(raw_item)
-            if not is_valid:
-                self.failed_count += 1
-                errors.append({"raw_input": raw_item, "reason": error_reason})
-                continue
-
-            processed_entry = {
-                "id": str(raw_item["id"]).strip(),
-                "task": raw_item["task"].strip().lower(),
-                "status": "success",
-            }
-            results.append(processed_entry)
-            self.processed_count += 1
-
-        return {
-            "processed": results,
-            "errors": errors,
-            "total_processed": self.processed_count,
-            "total_failed": self.failed_count,
-        }
+@retry(retries=3, delay=2.0)
+def fetch_data(url: str) -> dict:
+    # Simulate network call
+    import requests
+    response = requests.get(url, timeout=5)
+    response.raise_for_status()
+    return response.json()
