@@ -1,51 +1,37 @@
-import re
+import functools
 import time
-from typing import Any, Callable, Dict, List, TypeVar
+from typing import Callable, Any, Dict
 
-T = TypeVar("T")
+def memoize(func: Callable) -> Callable:
+    cache: Dict[tuple, Any] = {}
 
+    @functools.wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        key = (args, tuple(sorted(kwargs.items())))
+        if key not in cache:
+            cache[key] = func(*args, **kwargs)
+        return cache[key]
+    return wrapper
 
-def retry(
-    func: Callable[..., T],
-    retries: int = 3,
-    delay: float = 1.0,
-    backoff: float = 2.0,
-) -> T:
-    """Retry a callable with exponential backoff on exception."""
-    current_delay = delay
-    for attempt in range(retries):
-        try:
-            return func()
-        except Exception as err:
-            if attempt == retries - 1:
-                raise err
-            time.sleep(current_delay)
-            current_delay *= backoff
-    raise RuntimeError("Unexpected end of retry loop")
+def batch_process(items: list, chunk_size: int = 100):
+    for i in range(0, len(items), chunk_size):
+        yield items[i:i + chunk_size]
 
+class PerformanceTimer:
+    def __init__(self, name: str):
+        self.name = name
 
-def chunk_list(items: List[T], chunk_size: int) -> List[List[T]]:
-    """Split a list into smaller chunks of specified size."""
-    if chunk_size <= 0:
-        raise ValueError("chunk_size must be greater than zero")
-    return [items[i : i + chunk_size] for i in range(0, len(items), chunk_size)]
+    def __enter__(self):
+        self.start = time.perf_counter()
+        return self
 
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        elapsed = time.perf_counter() - self.start
+        print(f'{self.name} took {elapsed:.4f} seconds')
 
-def flatten_dict(
-    nested_dict: Dict[str, Any], parent_key: str = "", sep: str = "."
-) -> Dict[str, Any]:
-    """Flatten a nested dictionary structure using delimiter separated keys."""
-    items: Dict[str, Any] = {}
-    for k, v in nested_dict.items():
-        new_key = f"{parent_key}{sep}{k}" if parent_key else k
-        if isinstance(v, dict):
-            items.update(flatten_dict(v, new_key, sep=sep))
-        else:
-            items[new_key] = v
-    return items
-
-
-def sanitize_filename(name: str) -> str:
-    """Sanitize string to ensure safe file name usage."""
-    cleaned = re.sub(r'[\\/*?:"<>|]', "", name)
-    return cleaned.strip().replace(" ", "_").lower()
+@memoize
+def compute_heavy_task(n: int) -> int:
+    result = 0
+    for i in range(n):
+        result += i * i
+    return result
