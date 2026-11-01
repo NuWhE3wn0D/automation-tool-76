@@ -1,37 +1,23 @@
-import functools
-import time
-from typing import Callable, Any, Dict
+import os
+import json
+from typing import Any, Dict
 
-def memoize(func: Callable) -> Callable:
-    cache: Dict[tuple, Any] = {}
+def read_json(file_path: str) -> Dict[str, Any]:
+    if not os.path.exists(file_path):
+        return {}
+    with open(file_path, 'r', encoding='utf-8') as f:
+        return json.load(f)
 
-    @functools.wraps(func)
-    def wrapper(*args: Any, **kwargs: Any) -> Any:
-        key = (args, tuple(sorted(kwargs.items())))
-        if key not in cache:
-            cache[key] = func(*args, **kwargs)
-        return cache[key]
-    return wrapper
+def write_json(file_path: str, data: Dict[str, Any]) -> None:
+    with open(file_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=4)
 
-def batch_process(items: list, chunk_size: int = 100):
-    for i in range(0, len(items), chunk_size):
-        yield items[i:i + chunk_size]
+def ensure_dir(directory: str) -> None:
+    if not os.path.exists(directory):
+        os.makedirs(directory)
 
-class PerformanceTimer:
-    def __init__(self, name: str):
-        self.name = name
+def get_env_var(key: str, default: Any = None) -> Any:
+    return os.getenv(key, default)
 
-    def __enter__(self):
-        self.start = time.perf_counter()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        elapsed = time.perf_counter() - self.start
-        print(f'{self.name} took {elapsed:.4f} seconds')
-
-@memoize
-def compute_heavy_task(n: int) -> int:
-    result = 0
-    for i in range(n):
-        result += i * i
-    return result
+def sanitize_filename(filename: str) -> str:
+    return ''.join(c for c in filename if c.isalnum() or c in (' ', '.', '_')).strip()
