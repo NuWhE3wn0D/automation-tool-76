@@ -1,30 +1,24 @@
 import logging
-import functools
-from typing import Callable, Any
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
-class PerformanceLogger:
-    _instances = {}
+def setup_logger(name: str, log_file: str = 'automation.log') -> logging.Logger:
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
 
-    def __new__(cls, name: str) -> 'PerformanceLogger':
-        if name not in cls._instances:
-            instance = super().__new__(cls)
-            instance.logger = logging.getLogger(name)
-            instance.logger.setLevel(logging.INFO)
-            cls._instances[name] = instance
-        return cls._instances[name]
+    path = Path(log_file)
+    path.parent.mkdir(parents=True, exist_ok=True)
 
-    def __init__(self, name: str) -> None:
-        self.name = name
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
 
-    def timer(self, func: Callable[..., Any]) -> Callable[..., Any]:
-        @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            import time
-            start = time.perf_counter()
-            result = func(*args, **kwargs)
-            duration = time.perf_counter() - start
-            self.logger.info(f"{func.__name__} executed in {duration:.4f}s")
-            return result
-        return wrapper
-
-log = PerformanceLogger('automation-tool-76')
+    handler = RotatingFileHandler(
+        path, maxBytes=5 * 1024 * 1024, backupCount=3
+    )
+    handler.setFormatter(formatter)
+    
+    if not logger.handlers:
+        logger.addHandler(handler)
+    
+    return logger
