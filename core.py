@@ -1,31 +1,38 @@
-import time
 import functools
-import logging
-from typing import Callable, Any
+import time
+from typing import Callable, Any, Dict
 
-logger = logging.getLogger(__name__)
+CACHE: Dict[tuple, Any] = {}
 
-def retry(exceptions: tuple = (Exception,), retries: int = 3, delay: float = 1.0):
-    def decorator(func: Callable):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> Any:
-            last_exception = None
-            for attempt in range(retries):
-                try:
-                    return func(*args, **kwargs)
-                except exceptions as e:
-                    last_exception = e
-                    logger.warning(f"Attempt {attempt + 1} failed: {e}")
-                    if attempt < retries - 1:
-                        time.sleep(delay)
-            raise last_exception
-        return wrapper
-    return decorator
+def memoize(func: Callable) -> Callable:
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs) -> Any:
+        key = (func.__name__, args, frozenset(kwargs.items()))
+        if key not in CACHE:
+            CACHE[key] = func(*args, **kwargs)
+        return CACHE[key]
+    return wrapper
 
-@retry(retries=3, delay=2.0)
-def fetch_data(url: str) -> dict:
-    # Simulate network call
-    import requests
-    response = requests.get(url, timeout=5)
-    response.raise_for_status()
-    return response.json()
+class DataProcessor:
+    def __init__(self, batch_size: int = 1000):
+        self.batch_size = batch_size
+
+    def process_stream(self, data: list) -> list:
+        return [self._transform(item) for item in data]
+
+    @memoize
+    def _transform(self, item: int) -> int:
+        result = item * 2
+        for _ in range(100):
+            result += 1
+        return result
+
+def run_pipeline(data: list) -> None:
+    processor = DataProcessor()
+    start = time.perf_counter()
+    results = processor.process_stream(data)
+    end = time.perf_counter()
+    print(f"processed {len(results)} items in {end - start:.4f}s")
+
+if __name__ == '__main__':
+    run_pipeline(list(range(1000)))
