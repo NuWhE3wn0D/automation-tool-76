@@ -1,49 +1,31 @@
-import os
-import re
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 
 
-def validate_file_path(path: str, must_exist: bool = True) -> bool:
-    """Validate if a string is a valid file path and optionally exists.
+def validate_schema(data: dict, required_keys: List[str]) -> bool:
+    """Validate that all required keys are present in the data dictionary."""
+    return all(key in data for key in required_keys)
 
-    Args:
-        path: Path string to validate.
-        must_exist: Whether the path must exist on disk.
 
-    Returns:
-        True if valid, False otherwise.
-    """
-    if not path or not isinstance(path, str):
+def validate_positive_integer(value: Any) -> bool:
+    """Check if input is an integer greater than zero."""
+    return isinstance(value, int) and value > 0
+
+
+def sanitize_input(value: Optional[str]) -> str:
+    """Strip whitespace and return empty string if input is None."""
+    if value is None:
+        return ""
+    return value.strip()
+
+
+def validate_email_format(email: str) -> bool:
+    """Perform basic email format validation check."""
+    if not isinstance(email, str) or "@" not in email:
         return False
-    if must_exist:
-        return os.path.isfile(path)
-    return True
+    parts = email.split("@")
+    return len(parts) == 2 and all(len(p) > 0 for p in parts)
 
 
-def validate_email(email: str) -> bool:
-    """Validate basic email format using regular expression.
-
-    Args:
-        email: Email address string to check.
-
-    Returns:
-        True if the email format is valid, False otherwise.
-    """
-    pattern = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
-    return bool(re.match(pattern, email))
-
-
-def validate_config_dict(
-    config: Dict[str, Any], required_keys: List[str]
-) -> Optional[List[str]]:
-    """Check if a dictionary contains all required top-level keys.
-
-    Args:
-        config: Configuration dictionary to validate.
-        required_keys: List of keys that must be present.
-
-    Returns:
-        List of missing keys, or None if all required keys are present.
-    """
-    missing = [key for key in required_keys if key not in config]
-    return missing if missing else None
+def validate_payload(data: Any, expected_type: type) -> bool:
+    """Verify data matches the provided expected type."""
+    return isinstance(data, expected_type)
