@@ -1,30 +1,22 @@
-import os
-import json
-import logging
-from typing import Any, Dict, Optional
+import time
+import functools
+from typing import Callable, Any
 
-def load_json_file(file_path: str) -> Dict[str, Any]:
-    if not os.path.exists(file_path):
-        return {}
-    with open(file_path, 'r') as f:
-        try:
-            return json.load(f)
-        except json.JSONDecodeError:
-            return {}
+def retry(exceptions: tuple, tries: int = 3, delay: float = 1.0, backoff: float = 2.0) -> Callable:
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            mtries, mdelay = tries, delay
+            while mtries > 1:
+                try:
+                    return func(*args, **kwargs)
+                except exceptions:
+                    time.sleep(mdelay)
+                    mtries -= 1
+                    mdelay *= backoff
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
 
-def save_json_file(file_path: str, data: Dict[str, Any]) -> None:
-    with open(file_path, 'w') as f:
-        json.dump(data, f, indent=4)
-
-def ensure_directory(directory_path: str) -> None:
-    if not os.path.exists(directory_path):
-        os.makedirs(directory_path)
-
-def get_env_variable(key: str, default: Optional[str] = None) -> str:
-    return os.getenv(key, default or '')
-
-def format_log_message(level: str, message: str) -> str:
-    return f"[{level.upper()}] {message}"
-
-def truncate_string(text: str, max_length: int = 50) -> str:
-    return text[:max_length] + '...' if len(text) > max_length else text
+def execute_with_retry(func: Callable, *args: Any, **kwargs: Any) -> Any:
+    return retry((Exception,), tries=3, delay=1.0)(func)(*args, **kwargs)
