@@ -1,26 +1,48 @@
+import json
 import logging
-from typing import List, Dict, Any
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
-class DataProcessor:
-    def __init__(self, config: Dict[str, Any]):
-        self.config = config
-        self.batch_size = config.get('batch_size', 100)
 
-    def process_records(self, records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        return [self._sanitize(record) for record in records if self._is_valid(record)]
+class ProcessingError(Exception):
+    pass
 
-    def _sanitize(self, record: Dict[str, Any]) -> Dict[str, Any]:
-        return {k: v.strip() if isinstance(v, str) else v for k, v in record.items()}
 
-    def _is_valid(self, record: Dict[str, Any]) -> bool:
-        return all(key in record for key in ['id', 'payload'])
+class InvalidPayloadError(ProcessingError):
+    pass
 
-    def execute_pipeline(self, data: List[Dict[str, Any]]) -> None:
+
+class TaskProcessor:
+    def __init__(self, max_retries: int = 3):
+        self.max_retries = max_retries
+
+    def parse_payload(self, raw_data: str) -> Dict[str, Any]:
+        if not raw_data or not raw_data.strip():
+            raise InvalidPayloadError("Payload cannot be empty")
         try:
-            processed = self.process_records(data)
-            logger.info(f'processed {len(processed)} records successfully')
-        except Exception as e:
-            logger.error(f'pipeline failure: {str(e)}')
-            raise
+            data = json.loads(raw_data)
+            if not isinstance(data, dict):
+                raise InvalidPayloadError("Payload must be a JSON object")
+            return data
+        except json.JSONDecodeError as err:
+            raise InvalidPayloadError(f"Invalid JSON syntax: {err}") from err
+
+    def process_task(self, raw_data: str) -> Optional[Dict[str, Any]]:
+        try:
+            payload = self.parse_payload(raw_data)
+            action = payload.get("action")
+            if not action or not isinstance(action, str):
+                raise InvalidPayloadError("Missing or invalid 'action' key")
+
+            params = payload.get("params", {})
+            if not isinstance(params, dict):
+                raise InvalidPayloadError("'params' must be a dictionary")
+
+            return {"status": "success", "action": action, "result": params}
+        except InvalidPayloadError as err:
+            logger.error("Payload processing failed: %s", err)
+            return {"status": "error", "message": str(err)}
+        except Exception as err:
+            logger.exception("Unexpected error during processing: %s", err)
+            return {"status": "error", "message": "Internal processing failure"}
