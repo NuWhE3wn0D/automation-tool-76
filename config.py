@@ -4,25 +4,23 @@ from typing import Dict, Any
 
 BASE_DIR = Path(__file__).resolve().parent
 
-def load_environment_config() -> Dict[str, Any]:
-    return {
-        "log_level": os.getenv("LOG_LEVEL", "INFO"),
-        "timeout": int(os.getenv("TIMEOUT", "30")),
-        "max_retries": int(os.getenv("MAX_RETRIES", "3")),
-        "output_dir": BASE_DIR / "output"
-    }
+DEFAULT_CONFIG: Dict[str, Any] = {
+    "log_level": "INFO",
+    "timeout": 30,
+    "retry_attempts": 3,
+    "output_dir": BASE_DIR / "output"
+}
 
-class Settings:
-    def __init__(self):
-        self.env = load_environment_config()
+def load_config(env_vars: Dict[str, str] = None) -> Dict[str, Any]:
+    config = DEFAULT_CONFIG.copy()
+    env = env_vars or os.environ
+    
+    if "APP_LOG_LEVEL" in env:
+        config["log_level"] = env["APP_LOG_LEVEL"]
+    if "APP_TIMEOUT" in env:
+        config["timeout"] = int(env["APP_TIMEOUT"])
+        
+    config["output_dir"].mkdir(parents=True, exist_ok=True)
+    return config
 
-    def get(self, key: str, default: Any = None) -> Any:
-        return self.env.get(key, default)
-
-    @property
-    def storage_path(self) -> Path:
-        path = self.env.get("output_dir")
-        path.mkdir(parents=True, exist_ok=True)
-        return path
-
-app_settings = Settings()
+settings = load_config()
