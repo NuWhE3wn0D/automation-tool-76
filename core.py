@@ -1,38 +1,35 @@
-import functools
-import time
-from typing import Callable, Any, Dict
+from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
+from typing import Any, Callable, Dict, List, Optional
 
-CACHE: Dict[tuple, Any] = {}
 
-def memoize(func: Callable) -> Callable:
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs) -> Any:
-        key = (func.__name__, args, frozenset(kwargs.items()))
-        if key not in CACHE:
-            CACHE[key] = func(*args, **kwargs)
-        return CACHE[key]
-    return wrapper
+class AutomationEngine:
+    def __init__(self, max_workers: Optional[int] = None) -> None:
+        self.max_workers = max_workers or 4
+        self._executor = ThreadPoolExecutor(max_workers=self.max_workers)
 
-class DataProcessor:
-    def __init__(self, batch_size: int = 1000):
-        self.batch_size = batch_size
+    @lru_cache(maxsize=1024)
+    def _memoized_transform(self, key: str, payload: str) -> str:
+        return f"{key}:{hash(payload)}"
 
-    def process_stream(self, data: list) -> list:
-        return [self._transform(item) for item in data]
+    def execute_task(self, task_fn: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
+        future = self._executor.submit(task_fn, *args, **kwargs)
+        return future.result()
 
-    @memoize
-    def _transform(self, item: int) -> int:
-        result = item * 2
-        for _ in range(100):
-            result += 1
-        return result
+    def run_parallel_batch(self, items: List[Dict[str, Any]]) -> List[str]:
+        def _process_item(item: Dict[str, Any]) -> str:
+            item_id = str(item.get("id", "default"))
+            content = str(item.get("content", ""))
+            return self._memoized_transform(item_id, content)
 
-def run_pipeline(data: list) -> None:
-    processor = DataProcessor()
-    start = time.perf_counter()
-    results = processor.process_stream(data)
-    end = time.perf_counter()
-    print(f"processed {len(results)} items in {end - start:.4f}s")
+        futures = [self._executor.submit(_process_item, item) for item in items]
+        return [future.result() for future in futures]
 
-if __name__ == '__main__':
-    run_pipeline(list(range(1000)))
+    def close(self) -> None:
+        self._executor.shutdown(wait=False)
+
+    def __enter__(self) -> "AutomationEngine":
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        self.close()
