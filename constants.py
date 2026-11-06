@@ -1,25 +1,23 @@
-from typing import Final
+from typing import Final, Dict, List
 
-import os
-import multiprocessing
-
-# System resource optimization constants
-CACHE_SIZE: Final[int] = 1024
-WORKER_COUNT: Final[int] = multiprocessing.cpu_count()
-CHUNK_SIZE: Final[int] = 4096
-
-# Performance thresholds
-TIMEOUT_THRESHOLD: Final[float] = 30.0
-BUFFER_THRESHOLD: Final[int] = 65536
-
-# Path constants for I/O operations
-BASE_PATH: Final[str] = os.getenv("APP_BASE_PATH", "/var/lib/automation")
-TEMP_DIR: Final[str] = os.path.join(BASE_PATH, "tmp")
-
-# Network optimization
+TIMEOUT_SECONDS: Final[int] = 30
 MAX_RETRIES: Final[int] = 3
-CONNECTION_POOL_SIZE: Final[int] = 20
+API_BASE_URL: Final[str] = "https://api.automation-tool-76.io"
+SUPPORTED_EXTENSIONS: Final[List[str]] = [".json", ".yaml", ".toml"]
 
-# Serialization settings
-ENABLE_COMPRESSION: Final[bool] = True
-SERIALIZATION_LEVEL: Final[int] = 6
+STATUS_CODES: Final[Dict[int, str]] = {
+    200: "OK",
+    201: "CREATED",
+    400: "BAD_REQUEST",
+    401: "UNAUTHORIZED",
+    404: "NOT_FOUND",
+    500: "SERVER_ERROR",
+}
+
+def get_timeout() -> int:
+    """Return the configured timeout value."""
+    return TIMEOUT_SECONDS
+
+def is_supported(extension: str) -> bool:
+    """Check if the provided file extension is allowed."""
+    return extension.lower() in SUPPORTED_EXTENSIONS
