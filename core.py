@@ -1,36 +1,45 @@
-import os
-import logging
-from typing import List, Dict, Any
+import concurrent.futures
+import functools
+import itertools
+from typing import Callable, Iterable, List, Sequence, TypeVar
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+T = TypeVar("T")
+R = TypeVar("R")
 
-class AutomationEngine:
-    def __init__(self, target_dir: str):
-        self.target_dir = target_dir
 
-    def get_file_list(self) -> List[str]:
-        if not os.path.exists(self.target_dir):
+class OptimizedPipeline:
+    def __init__(self, max_workers: int = 8, batch_size: int = 100):
+        self.max_workers = max_workers
+        self.batch_size = batch_size
+
+    @staticmethod
+    @functools.lru_cache(maxsize=1024)
+    def _cached_transform(val: str) -> str:
+        return val.strip().lower()
+
+    def _chunk_iterable(self, iterable: Iterable[T], size: int) -> Iterable[List[T]]:
+        iterator = iter(iterable)
+        while chunk := list(itertools.islice(iterator, size)):
+            yield chunk
+
+    def map_parallel(self, func: Callable[[T], R], items: Sequence[T]) -> List[R]:
+        if not items:
             return []
-        return [f for f in os.listdir(self.target_dir) if f.endswith('.tmp')]
 
-    def cleanup_artifacts(self) -> Dict[str, Any]:
-        results = {'removed': 0, 'errors': 0}
-        for filename in self.get_file_list():
-            filepath = os.path.join(self.target_dir, filename)
-            try:
-                os.remove(filepath)
-                results['removed'] += 1
-            except OSError as e:
-                logger.error(f'failed to delete {filepath}: {e}')
-                results['errors'] += 1
+        if len(items) < self.batch_size:
+            return [func(item) for item in items]
+
+        results: List[R] = []
+        chunks = list(self._chunk_iterable(items, self.batch_size))
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            futures = [
+                executor.submit(lambda c: [func(x) for x in c], chunk)
+                for chunk in chunks
+            ]
+            for future in concurrent.futures.as_completed(futures):
+                results.extend(future.result())
         return results
 
-    def run_pipeline(self) -> None:
-        logger.info('starting automated task sequence')
-        summary = self.cleanup_artifacts()
-        logger.info(f'cleanup complete: {summary}')
-
-if __name__ == '__main__':
-    engine = AutomationEngine(target_dir='./data')
-    engine.run_pipeline()
+    def normalize_keys(self, keys: List[str]) -> List[str]:
+        return self.map_parallel(self._cached_transform, keys)
