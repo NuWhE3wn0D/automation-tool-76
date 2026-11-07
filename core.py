@@ -1,29 +1,36 @@
-import time
-import functools
+import os
 import logging
-from typing import Callable, Any
+from typing import List, Dict, Any
 
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def retry(max_attempts: int = 3, delay: float = 1.0, exceptions: tuple = (Exception,)):
-    def decorator(func: Callable):
-        @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            last_exception = None
-            for attempt in range(1, max_attempts + 1):
-                try:
-                    return func(*args, **kwargs)
-                except exceptions as e:
-                    last_exception = e
-                    if attempt < max_attempts:
-                        time.sleep(delay)
-                        continue
-            logger.error(f'operation failed after {max_attempts} attempts')
-            raise last_exception
-        return wrapper
-    return decorator
+class AutomationEngine:
+    def __init__(self, target_dir: str):
+        self.target_dir = target_dir
 
-@retry(max_attempts=3, delay=2.0, exceptions=(ConnectionError, TimeoutError))
-def fetch_data(url: str) -> str:
-    # example network operation implementation
-    return f'data from {url}'
+    def get_file_list(self) -> List[str]:
+        if not os.path.exists(self.target_dir):
+            return []
+        return [f for f in os.listdir(self.target_dir) if f.endswith('.tmp')]
+
+    def cleanup_artifacts(self) -> Dict[str, Any]:
+        results = {'removed': 0, 'errors': 0}
+        for filename in self.get_file_list():
+            filepath = os.path.join(self.target_dir, filename)
+            try:
+                os.remove(filepath)
+                results['removed'] += 1
+            except OSError as e:
+                logger.error(f'failed to delete {filepath}: {e}')
+                results['errors'] += 1
+        return results
+
+    def run_pipeline(self) -> None:
+        logger.info('starting automated task sequence')
+        summary = self.cleanup_artifacts()
+        logger.info(f'cleanup complete: {summary}')
+
+if __name__ == '__main__':
+    engine = AutomationEngine(target_dir='./data')
+    engine.run_pipeline()
