@@ -1,46 +1,28 @@
-import functools
-import logging
-import time
-from typing import Callable, Tuple, Type, Union
+import json
+import os
+from pathlib import Path
+from typing import Any, Dict, Optional
 
-logger = logging.getLogger(__name__)
+def load_json(file_path: str) -> Dict[str, Any]:
+    path = Path(file_path)
+    if not path.exists():
+        return {}
+    with open(path, 'r', encoding='utf-8') as f:
+        return json.load(f)
 
+def save_json(data: Dict[str, Any], file_path: str) -> None:
+    with open(file_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=4)
 
-def retry_network_op(
-    max_retries: int = 3,
-    delay: float = 1.0,
-    backoff: float = 2.0,
-    exceptions: Union[Type[Exception], Tuple[Type[Exception], ...]] = (
-        ConnectionError,
-        TimeoutError,
-        OSError,
-    ),
-) -> Callable:
-    def decorator(func: Callable) -> Callable:
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            current_delay = delay
-            for attempt in range(1, max_retries + 1):
-                try:
-                    return func(*args, **kwargs)
-                except exceptions as err:
-                    if attempt == max_retries:
-                        logger.error(
-                            "Operation failed after %d attempts: %s",
-                            max_retries,
-                            err,
-                        )
-                        raise
-                    logger.warning(
-                        "Attempt %d/%d failed: %s. Retrying in %.2fs...",
-                        attempt,
-                        max_retries,
-                        err,
-                        current_delay,
-                    )
-                    time.sleep(current_delay)
-                    current_delay *= backoff
+def get_env_var(key: str, default: Optional[str] = None) -> str:
+    return os.getenv(key, default or '')
 
-        return wrapper
+def ensure_dir(directory: str) -> None:
+    Path(directory).mkdir(parents=True, exist_ok=True)
 
-    return decorator
+def format_byte_size(size: int) -> str:
+    for unit in ['B', 'KB', 'MB', 'GB']:
+        if size < 1024:
+            return f'{size:.2f} {unit}'
+        size /= 1024
+    return f'{size:.2f} TB'
