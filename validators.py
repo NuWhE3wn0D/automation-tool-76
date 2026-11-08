@@ -1,31 +1,31 @@
-from typing import Any, List, Optional
+import re
+from typing import Any, Optional
 
+class ValidationError(Exception):
+    pass
 
-def validate_schema(data: dict, required_keys: List[str]) -> bool:
-    """Validate that all required keys are present in the data dictionary."""
-    return all(key in data for key in required_keys)
+def validate_email(email: str) -> bool:
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not re.match(pattern, email):
+        raise ValidationError(f'Invalid email format: {email}')
+    return True
 
-
-def validate_positive_integer(value: Any) -> bool:
-    """Check if input is an integer greater than zero."""
-    return isinstance(value, int) and value > 0
-
+def validate_port(port: Any) -> int:
+    try:
+        val = int(port)
+        if 1 <= val <= 65535:
+            return val
+    except (ValueError, TypeError):
+        pass
+    raise ValidationError(f'Invalid port range: {port}')
 
 def sanitize_input(value: Optional[str]) -> str:
-    """Strip whitespace and return empty string if input is None."""
     if value is None:
-        return ""
-    return value.strip()
+        return ''
+    return str(value).strip().replace('\\', '')
 
-
-def validate_email_format(email: str) -> bool:
-    """Perform basic email format validation check."""
-    if not isinstance(email, str) or "@" not in email:
-        return False
-    parts = email.split("@")
-    return len(parts) == 2 and all(len(p) > 0 for p in parts)
-
-
-def validate_payload(data: Any, expected_type: type) -> bool:
-    """Verify data matches the provided expected type."""
-    return isinstance(data, expected_type)
+def validate_config_schema(data: dict, required_keys: list[str]) -> bool:
+    for key in required_keys:
+        if key not in data:
+            raise ValidationError(f'Missing required configuration key: {key}')
+    return True
