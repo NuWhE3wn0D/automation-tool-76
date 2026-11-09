@@ -1,28 +1,31 @@
 import logging
-from typing import Optional
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
-def get_logger(name: str, level: int = logging.INFO) -> logging.Logger:
-    """Configure and return a standard application logger."""
+LOG_FILE = "automation-tool-76.log"
+MAX_BYTES = 5 * 1024 * 1024
+BACKUP_COUNT = 3
+
+def setup_logger(name: str = "automation-tool-76") -> logging.Logger:
     logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
+
     if not logger.handlers:
-        handler = logging.StreamHandler()
         formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-        logger.setLevel(level)
+
+        file_handler = RotatingFileHandler(
+            LOG_FILE, 
+            maxBytes=MAX_BYTES, 
+            backup_count=BACKUP_COUNT
+        )
+        file_handler.setFormatter(formatter)
+
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+
+        logger.addHandler(file_handler)
+        logger.addHandler(console_handler)
+
     return logger
-
-class AutomationLogger:
-    """Wrapper class for consistent logging operations."""
-    def __init__(self, name: str) -> None:
-        self.logger = get_logger(name)
-
-    def info(self, msg: str) -> None:
-        """Log info level message."""
-        self.logger.info(msg)
-
-    def error(self, msg: str, exc_info: bool = False) -> None:
-        """Log error level message."""
-        self.logger.error(msg, exc_info=exc_info)
