@@ -1,28 +1,28 @@
 import json
-import os
-from pathlib import Path
 from typing import Any, Dict, Optional
 
-def load_json(file_path: str) -> Dict[str, Any]:
-    path = Path(file_path)
-    if not path.exists():
+def load_json_file(path: str) -> Dict[str, Any]:
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
         return {}
-    with open(path, 'r', encoding='utf-8') as f:
-        return json.load(f)
 
-def save_json(data: Dict[str, Any], file_path: str) -> None:
-    with open(file_path, 'w', encoding='utf-8') as f:
-        json.dump(data, f, indent=4)
+def save_json_file(path: str, data: Dict[str, Any]) -> bool:
+    try:
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4)
+        return True
+    except IOError:
+        return False
 
-def get_env_var(key: str, default: Optional[str] = None) -> str:
-    return os.getenv(key, default or '')
+def clean_dict(data: Dict[str, Any]) -> Dict[str, Any]:
+    return {k: v for k, v in data.items() if v is not None}
 
-def ensure_dir(directory: str) -> None:
-    Path(directory).mkdir(parents=True, exist_ok=True)
+def safe_get(data: Dict[str, Any], key: str, default: Any = None) -> Any:
+    return data.get(key, default)
 
-def format_byte_size(size: int) -> str:
-    for unit in ['B', 'KB', 'MB', 'GB']:
-        if size < 1024:
-            return f'{size:.2f} {unit}'
-        size /= 1024
-    return f'{size:.2f} TB'
+def merge_data(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
+    result = base.copy()
+    result.update(override)
+    return result
