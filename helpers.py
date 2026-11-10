@@ -1,22 +1,28 @@
-import time
-import functools
-from typing import Callable, Any
+import json
+import os
+from typing import Any, Dict
 
-def retry(exceptions: tuple, tries: int = 3, delay: float = 1.0, backoff: float = 2.0) -> Callable:
-    def decorator(func: Callable) -> Callable:
-        @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            mtries, mdelay = tries, delay
-            while mtries > 1:
-                try:
-                    return func(*args, **kwargs)
-                except exceptions:
-                    time.sleep(mdelay)
-                    mtries -= 1
-                    mdelay *= backoff
-            return func(*args, **kwargs)
-        return wrapper
-    return decorator
+DEFAULT_CONFIG: Dict[str, Any] = {
+    "retries": 3,
+    "timeout": 30,
+    "log_level": "INFO",
+    "enabled": True
+}
 
-def execute_with_retry(func: Callable, *args: Any, **kwargs: Any) -> Any:
-    return retry((Exception,), tries=3, delay=1.0)(func)(*args, **kwargs)
+def load_config(path: str = "config.json") -> Dict[str, Any]:
+    config = DEFAULT_CONFIG.copy()
+    if not os.path.exists(path):
+        return config
+
+    try:
+        with open(path, "r") as f:
+            user_data = json.load(f)
+            config.update(user_data)
+    except (json.JSONDecodeError, IOError):
+        pass
+
+    return config
+
+def get_config_value(key: str, path: str = "config.json") -> Any:
+    config = load_config(path)
+    return config.get(key, DEFAULT_CONFIG.get(key))
