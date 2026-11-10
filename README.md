@@ -1,17 +1,17 @@
 # automation-tool-76
 
-A lightweight, high-performance Python framework designed to streamline repetitive task execution across local and remote environments. It provides a robust engine for scheduling, chaining workflows, and logging execution metrics with minimal overhead.
+`automation-tool-76` is a lightweight, high-performance Python framework designed to streamline repetitive CLI-based workflows. It provides a modular architecture for task orchestration, allowing developers to execute complex automation sequences with minimal boilerplate.
 
 ## Features
 
-*   **Task Chaining:** Easily define sequential dependencies between multiple scripts to create complex automation pipelines.
-*   **Dynamic Scheduling:** Built-in cron-style scheduler with support for sub-second precision and flexible job intervals.
-*   **Asynchronous Execution:** Utilizes `asyncio` to run parallel tasks, significantly reducing total runtime for I/O-bound operations.
-*   **Integrated Monitoring:** Real-time logging of task success, failure, and execution latency, with exportable JSON output for audit trails.
+*   **Task Chaining:** Easily link sequential operations with built-in dependency management.
+*   **Asynchronous Execution:** Leverages `asyncio` to handle concurrent I/O-bound processes for maximum throughput.
+*   **Configurable Logging:** Supports multi-level logging with JSON export capabilities for easier debugging.
+*   **Environment Validation:** Integrated pre-flight checks to ensure required binaries and environment variables are present before execution.
 
 ## Installation
 
-Ensure you have Python 3.9+ installed. You can install the tool directly via pip:
+Ensure you have Python 3.9+ installed. You can install the tool via pip:
 
 ```bash
 # Clone the repository
@@ -22,37 +22,31 @@ cd automation-tool-76
 pip install -r requirements.txt
 ```
 
-## Basic Usage
+## Usage
 
-Create a `tasks.yaml` file to define your routine, then execute the tool using the following command:
+Define your automation logic in a YAML configuration file, then trigger the engine from the command line.
+
+**Example execution:**
 
 ```bash
-python main.py --config tasks.yaml --verbose
+# Run a specific task defined in tasks.yaml
+python main.py --config tasks.yaml --task deploy-stage
 ```
 
-**Example task configuration:**
-
-```yaml
-tasks:
-  - name: cleanup-temp
-    command: "rm -rf /tmp/app/*"
-    interval: "3600" # Runs every hour
-  - name: sync-logs
-    command: "python scripts/sync.py --remote"
-    depends_on: cleanup-temp
-```
-
-For advanced scripting, you can import the engine as a library:
+**Basic Python snippet:**
 
 ```python
-from automation_tool import Engine
+from automation import Engine
 
-engine = Engine(config="tasks.yaml")
-engine.run_all()
+# Initialize the engine
+engine = Engine(config_path="tasks.yaml")
+
+# Run the automation pipeline
+engine.run(task="sync-files")
 ```
 
 ## License
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Distributed under the MIT License. See `LICENSE` for more information.
+This project is licensed under the MIT License. See the `LICENSE` file for details.
