@@ -1,27 +1,30 @@
-from typing import Any, Dict, List, Optional
 import json
-import os
+from typing import Any, Dict, Optional
 
 def load_json_file(file_path: str) -> Dict[str, Any]:
-    """Load and parse a JSON file from disk."""
-    if not os.path.exists(file_path):
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
         return {}
-    with open(file_path, "r", encoding="utf-8") as f:
-        return json.load(f)
 
-def save_json_file(data: Dict[str, Any], file_path: str) -> None:
-    """Serialize data and write to a JSON file."""
-    with open(file_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=4)
+def save_json_file(file_path: str, data: Dict[str, Any]) -> bool:
+    try:
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4)
+        return True
+    except IOError:
+        return False
 
-def chunk_list(items: List[Any], size: int) -> List[List[Any]]:
-    """Split a list into smaller sub-lists of specified size."""
-    return [items[i:i + size] for i in range(0, len(items), size)]
+def clean_dict(data: Dict[str, Any]) -> Dict[str, Any]:
+    return {k: v for k, v in data.items() if v is not None}
 
-def format_log_entry(message: str, level: str = "INFO") -> str:
-    """Construct a standardized log string."""
-    return f"[{level}] {message}"
-
-def get_env_variable(key: str, default: Optional[str] = None) -> Optional[str]:
-    """Retrieve an environment variable with an optional fallback."""
-    return os.environ.get(key, default)
+def flatten_dict(d: Dict[str, Any], parent_key: str = '', sep: str = '_') -> Dict[str, Any]:
+    items = []
+    for k, v in d.items():
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, dict):
+            items.extend(flatten_dict(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
