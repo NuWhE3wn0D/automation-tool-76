@@ -1,47 +1,27 @@
-from typing import Any, Dict, Iterable, List, Generator
+from typing import Any, Dict, List, Optional
+import json
+import os
 
+def load_json_file(file_path: str) -> Dict[str, Any]:
+    """Load and parse a JSON file from disk."""
+    if not os.path.exists(file_path):
+        return {}
+    with open(file_path, "r", encoding="utf-8") as f:
+        return json.load(f)
 
-def flatten_dict(
-    data: Dict[str, Any], parent_key: str = "", sep: str = "."
-) -> Dict[str, Any]:
-    items: List[tuple] = []
-    for k, v in data.items():
-        new_key = f"{parent_key}{sep}{k}" if parent_key else str(k)
-        if isinstance(v, dict):
-            items.extend(flatten_dict(v, new_key, sep=sep).items())
-        else:
-            items.append((new_key, v))
-    return dict(items)
+def save_json_file(data: Dict[str, Any], file_path: str) -> None:
+    """Serialize data and write to a JSON file."""
+    with open(file_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4)
 
+def chunk_list(items: List[Any], size: int) -> List[List[Any]]:
+    """Split a list into smaller sub-lists of specified size."""
+    return [items[i:i + size] for i in range(0, len(items), size)]
 
-def chunk_iterable(
-    iterable: Iterable[Any], size: int
-) -> Generator[List[Any], None, None]:
-    if size < 1:
-        raise ValueError("Chunk size must be at least 1")
-    chunk: List[Any] = []
-    for item in iterable:
-        chunk.append(item)
-        if len(chunk) == size:
-            yield chunk
-            chunk = []
-    if chunk:
-        yield chunk
+def format_log_entry(message: str, level: str = "INFO") -> str:
+    """Construct a standardized log string."""
+    return f"[{level}] {message}"
 
-
-def sanitize_data(data: Any) -> Any:
-    if isinstance(data, dict):
-        cleaned = {}
-        for k, v in data.items():
-            if v is not None:
-                res = sanitize_data(v)
-                if res != {} and res != []:
-                    cleaned[k] = res
-        return cleaned
-    if isinstance(data, list):
-        return [
-            sanitize_data(item)
-            for item in data
-            if item is not None and sanitize_data(item) not in ({}, [])
-        ]
-    return data
+def get_env_variable(key: str, default: Optional[str] = None) -> Optional[str]:
+    """Retrieve an environment variable with an optional fallback."""
+    return os.environ.get(key, default)
