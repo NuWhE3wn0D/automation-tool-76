@@ -1,37 +1,34 @@
-import functools
-from typing import Callable, Any, Dict
+import logging
+from typing import Any, Callable, Dict
 
-CACHE: Dict[tuple, Any] = {}
+logger = logging.getLogger(__name__)
 
-class DataHandler:
-    def __init__(self, buffer_size: int = 1024):
-        self.buffer_size = buffer_size
-        self._cache = CACHE
 
-    def memoize_result(func: Callable) -> Callable:
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> Any:
-            key = (func.__name__, args, frozenset(kwargs.items()))
-            if key not in CACHE:
-                CACHE[key] = func(*args, **kwargs)
-            return CACHE[key]
-        return wrapper
+class TaskHandler:
+    def __init__(self) -> None:
+        self._handlers: Dict[str, Callable[..., Any]] = {}
 
-    @memoize_result
-    def process_payload(self, data: bytes) -> dict:
-        return {
-            "size": len(data),
-            "checksum": hash(data),
-            "status": "optimized"
-        }
+    def register(self, task_type: str, func: Callable[..., Any]) -> None:
+        if not task_type or not callable(func):
+            raise ValueError("Invalid task type or handler function")
+        self._handlers[task_type] = func
+        logger.debug("Registered handler for task type: %s", task_type)
 
-    def batch_process(self, items: list) -> list:
-        return [self.process_payload(i) for i in items]
+    def unregister(self, task_type: str) -> bool:
+        return self._handlers.pop(task_type, None) is not None
 
-    def clear_cache(self) -> None:
-        global CACHE
-        CACHE.clear()
+    def handle(self, task_type: str, *args: Any, **kwargs: Any) -> Any:
+        handler = self._handlers.get(task_type)
+        if not handler:
+            raise KeyError(f"No handler registered for task type: '{task_type}'")
+        logger.info("Executing handler for task type: %s", task_type)
+        return handler(*args, **kwargs)
 
-if __name__ == "__main__":
-    handler = DataHandler()
-    handler.batch_process([b"data1", b"data2"])
+    def can_handle(self, task_type: str) -> bool:
+        return task_type in self._handlers
+
+    def clear(self) -> None:
+        self._handlers.clear()
+
+
+default_handler = TaskHandler()
