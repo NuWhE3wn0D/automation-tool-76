@@ -1,28 +1,37 @@
-import json
 import os
+import json
+import logging
 from typing import Any, Dict
 
-DEFAULT_CONFIG: Dict[str, Any] = {
-    "retries": 3,
-    "timeout": 30,
-    "log_level": "INFO",
-    "enabled": True
-}
+logger = logging.getLogger(__name__)
 
-def load_config(path: str = "config.json") -> Dict[str, Any]:
-    config = DEFAULT_CONFIG.copy()
-    if not os.path.exists(path):
-        return config
-
+def load_json(file_path: str) -> Dict[str, Any]:
     try:
-        with open(path, "r") as f:
-            user_data = json.load(f)
-            config.update(user_data)
-    except (json.JSONDecodeError, IOError):
-        pass
+        with open(file_path, "r") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        logger.error(f"Failed to load {file_path}: {e}")
+        return {}
 
-    return config
+def save_json(file_path: str, data: Dict[str, Any]) -> bool:
+    try:
+        with open(file_path, "w") as f:
+            json.dump(data, f, indent=4)
+        return True
+    except Exception as e:
+        logger.error(f"Failed to save {file_path}: {e}")
+        return False
 
-def get_config_value(key: str, path: str = "config.json") -> Any:
-    config = load_config(path)
-    return config.get(key, DEFAULT_CONFIG.get(key))
+def get_env_var(key: str, default: Any = None) -> Any:
+    return os.getenv(key, default)
+
+def ensure_directory(path: str) -> None:
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+def format_byte_size(size: int) -> str:
+    for unit in ['B', 'KB', 'MB', 'GB']:
+        if size < 1024:
+            return f"{size:.2f} {unit}"
+        size /= 1024
+    return f"{size:.2f} TB"
