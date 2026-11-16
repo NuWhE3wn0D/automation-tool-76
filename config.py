@@ -1,23 +1,34 @@
 import json
-from pathlib import Path
+import os
 from typing import Any, Dict
 
+DEFAULT_CONFIG = {
+    "retries": 3,
+    "timeout": 30,
+    "verbose": False,
+    "log_path": "/var/log/automation.log"
+}
+
 class ConfigLoader:
-    def __init__(self, defaults: Dict[str, Any]):
-        self.defaults = defaults
+    def __init__(self, config_path: str = "config.json"):
+        self.path = config_path
+        self.settings = DEFAULT_CONFIG.copy()
+        self._load()
 
-    def load(self, file_path: str) -> Dict[str, Any]:
-        path = Path(file_path)
-        if not path.exists():
-            return self.defaults
+    def _load(self) -> None:
+        if os.path.exists(self.path):
+            with open(self.path, "r") as f:
+                try:
+                    user_data = json.load(f)
+                    self.settings.update(user_data)
+                except json.JSONDecodeError:
+                    pass
 
-        try:
-            with open(path, "r") as f:
-                user_config = json.load(f)
-            return {**self.defaults, **user_config}
-        except (json.JSONDecodeError, IOError):
-            return self.defaults
+    def get(self, key: str, default: Any = None) -> Any:
+        return self.settings.get(key, default)
 
-def get_config(path: str, defaults: Dict[str, Any]) -> Dict[str, Any]:
-    loader = ConfigLoader(defaults)
-    return loader.load(path)
+    def __getitem__(self, key: str) -> Any:
+        return self.settings[key]
+
+    def __repr__(self) -> str:
+        return f"ConfigLoader(settings={self.settings})"
