@@ -1,28 +1,47 @@
 import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+from typing import Optional
 
-def get_logger(name: str, log_file: str = "automation.log") -> logging.Logger:
+
+def setup_logger(
+    name: str = "automation_tool",
+    log_file: Optional[str] = "logs/app.log",
+    level: int = logging.INFO,
+    max_bytes: int = 5 * 1024 * 1024,
+    backup_count: int = 3,
+) -> logging.Logger:
     logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(level)
 
-    if not logger.handlers:
+    if logger.handlers:
+        return logger
+
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+
+    if log_file:
         log_path = Path(log_file)
-        handler = RotatingFileHandler(
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        file_handler = RotatingFileHandler(
             log_path,
-            maxBytes=5 * 1024 * 1024,
-            backupCount=3,
-            encoding="utf-8"
+            maxBytes=max_bytes,
+            backupCount=backup_count,
+            encoding="utf-8",
         )
-        
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
 
     return logger
+
+
+def get_logger(name: Optional[str] = None) -> logging.Logger:
+    base_name = "automation_tool"
+    if name:
+        return logging.getLogger(f"{base_name}.{name}")
+    return logging.getLogger(base_name)
