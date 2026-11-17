@@ -1,44 +1,26 @@
-import functools
-import logging
-import time
-from typing import Any, Callable, Tuple, Type, Union
+from typing import Any, Dict, List, Optional
+import json
 
-logger = logging.getLogger(__name__)
+def flatten_dict(data: Dict[str, Any], parent_key: str = '', sep: str = '_') -> Dict[str, Any]:
+    items: List[tuple] = []
+    for k, v in data.items():
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, dict):
+            items.extend(flatten_dict(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
 
+def safe_json_parse(data: str, default: Optional[Any] = None) -> Any:
+    try:
+        return json.loads(data)
+    except (json.JSONDecodeError, TypeError):
+        return default
 
-def retry_network_op(
-    max_retries: int = 3,
-    delay: float = 1.0,
-    backoff: float = 2.0,
-    exceptions: Union[Type[Exception], Tuple[Type[Exception], ...]] = (
-        ConnectionError,
-        TimeoutError,
-        OSError,
-    ),
-) -> Callable:
-    def decorator(func: Callable) -> Callable:
-        @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
-            current_delay = delay
-            for attempt in range(1, max_retries + 1):
-                try:
-                    return func(*args, **kwargs)
-                except exceptions as err:
-                    if attempt == max_retries:
-                        logger.error(
-                            "Operation failed after %d attempts: %s", attempt, err
-                        )
-                        raise
-                    logger.warning(
-                        "Attempt %d/%d failed: %s. Retrying in %.1fs...",
-                        attempt,
-                        max_retries,
-                        err,
-                        current_delay,
-                    )
-                    time.sleep(current_delay)
-                    current_delay *= backoff
+def chunk_list(data: List[Any], size: int) -> List[List[Any]]:
+    if size <= 0:
+        raise ValueError("Chunk size must be positive")
+    return [data[i : i + size] for i in range(0, len(data), size)]
 
-        return wrapper
-
-    return decorator
+def filter_none_values(data: Dict[str, Any]) -> Dict[str, Any]:
+    return {k: v for k, v in data.items() if v is not None}
