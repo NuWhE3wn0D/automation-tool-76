@@ -1,34 +1,27 @@
-import re
-from typing import Any, Optional
+from typing import Any, Optional, Dict
 
+def validate_schema(data: Dict[str, Any], schema: Dict[str, type]) -> bool:
+    if not isinstance(data, dict):
+        return False
+    return all(key in data and isinstance(data[key], val_type) for key, val_type in schema.items())
 
-def validate_email(email: str) -> bool:
-    pattern = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
-    return bool(re.match(pattern, email))
+def sanitize_input(value: Any, default: Any = None) -> Any:
+    if value is None:
+        return default
+    return str(value).strip()
 
-
-def sanitize_input(value: Any) -> str:
-    if not isinstance(value, str):
-        value = str(value)
-    return value.strip()
-
-
-def check_required_keys(data: dict, keys: list[str]) -> bool:
-    return all(key in data for key in keys)
-
-
-def enforce_type(value: Any, expected_type: type) -> Optional[Any]:
-    if isinstance(value, expected_type):
-        return value
+def get_nested(data: Dict[str, Any], keys: str, delimiter: str = '.') -> Optional[Any]:
+    parts = keys.split(delimiter)
+    current = data
     try:
-        return expected_type(value)
-    except (ValueError, TypeError):
+        for part in parts:
+            current = current[part]
+        return current
+    except (KeyError, TypeError):
         return None
 
+def is_non_empty_dict(data: Any) -> bool:
+    return isinstance(data, dict) and bool(data)
 
-def validate_numeric_range(value: Any, min_val: float, max_val: float) -> bool:
-    try:
-        num = float(value)
-        return min_val <= num <= max_val
-    except (ValueError, TypeError):
-        return False
+def format_data(data: Dict[str, Any]) -> Dict[str, Any]:
+    return {str(k).lower(): v for k, v in data.items()}
