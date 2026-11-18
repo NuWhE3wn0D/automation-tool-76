@@ -1,28 +1,28 @@
-from typing import Any, Dict, List, Optional
+import re
+from typing import Any
 
-def validate_schema(data: Dict[str, Any], required_keys: List[str]) -> bool:
-    if not isinstance(data, dict):
-        return False
-    return all(key in data for key in required_keys)
+class DataValidator:
+    @staticmethod
+    def validate_email(email: str) -> bool:
+        pattern = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+        return bool(re.match(pattern, email))
 
-def sanitize_input(value: Any) -> Optional[str]:
-    if isinstance(value, str):
-        return value.strip()
-    return str(value).strip() if value is not None else None
+    @staticmethod
+    def validate_integer(value: Any, min_val: int = 0, max_val: int = 100) -> bool:
+        try:
+            val = int(value)
+            return min_val <= val <= max_val
+        except (ValueError, TypeError):
+            return False
 
-def validate_numeric_range(value: Any, min_val: float, max_val: float) -> bool:
-    try:
-        num = float(value)
-        return min_val <= num <= max_val
-    except (ValueError, TypeError):
-        return False
+    @staticmethod
+    def validate_config_key(key: str) -> bool:
+        return bool(re.match(r'^[a-z_][a-z0-9_]*$', key))
 
-def extract_field(data: Dict[str, Any], path: str, default: Any = None) -> Any:
-    keys = path.split('.')
-    current = data
-    for key in keys:
-        if isinstance(current, dict) and key in current:
-            current = current[key]
-        else:
-            return default
-    return current
+def clean_input(value: Any) -> str:
+    if not isinstance(value, str):
+        return ''
+    return value.strip().lower()
+
+class ValidationError(Exception):
+    pass
