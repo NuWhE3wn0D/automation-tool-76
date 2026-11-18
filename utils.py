@@ -1,26 +1,19 @@
-from typing import Any, Dict, List, Optional
-import json
+import time
+import functools
+from typing import Callable, Any
 
-def flatten_dict(data: Dict[str, Any], parent_key: str = '', sep: str = '_') -> Dict[str, Any]:
-    items: List[tuple] = []
-    for k, v in data.items():
-        new_key = f"{parent_key}{sep}{k}" if parent_key else k
-        if isinstance(v, dict):
-            items.extend(flatten_dict(v, new_key, sep=sep).items())
-        else:
-            items.append((new_key, v))
-    return dict(items)
-
-def safe_json_parse(data: str, default: Optional[Any] = None) -> Any:
-    try:
-        return json.loads(data)
-    except (json.JSONDecodeError, TypeError):
-        return default
-
-def chunk_list(data: List[Any], size: int) -> List[List[Any]]:
-    if size <= 0:
-        raise ValueError("Chunk size must be positive")
-    return [data[i : i + size] for i in range(0, len(data), size)]
-
-def filter_none_values(data: Dict[str, Any]) -> Dict[str, Any]:
-    return {k: v for k, v in data.items() if v is not None}
+def retry(max_attempts: int = 3, delay: float = 1.0, exceptions: tuple = (ConnectionError, TimeoutError)) -> Callable:
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            last_exception = None
+            for attempt in range(max_attempts):
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as e:
+                    last_exception = e
+                    if attempt < max_attempts - 1:
+                        time.sleep(delay * (2 ** attempt))
+            raise last_exception
+        return wrapper
+    return decorator
