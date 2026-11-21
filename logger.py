@@ -1,30 +1,34 @@
 import logging
-import sys
-from typing import Optional
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
-def get_logger(name: str, level: int = logging.INFO) -> logging.Logger:
-    """Configure and return a standard application logger."""
+LOG_DIR = Path("logs")
+LOG_FILE = LOG_DIR / "automation.log"
+MAX_BYTES = 5 * 1024 * 1024
+BACKUP_COUNT = 3
+
+def setup_logger(name: str = "automation-tool-76") -> logging.Logger:
+    LOG_DIR.mkdir(exist_ok=True)
+    
     logger = logging.getLogger(name)
-    logger.setLevel(level)
-
+    logger.setLevel(logging.INFO)
+    
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    
+    file_handler = RotatingFileHandler(
+        LOG_FILE, 
+        maxBytes=MAX_BYTES, 
+        backup_count=BACKUP_COUNT
+    )
+    file_handler.setFormatter(formatter)
+    
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    
     if not logger.handlers:
-        handler = logging.StreamHandler(sys.stdout)
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-
+        logger.addHandler(file_handler)
+        logger.addHandler(console_handler)
+        
     return logger
-
-def log_message(logger: logging.Logger, message: str, level: str = "info") -> None:
-    """Log a message with a specified severity level."""
-    levels = {
-        "debug": logger.debug,
-        "info": logger.info,
-        "warning": logger.warning,
-        "error": logger.error,
-        "critical": logger.critical,
-    }
-    log_func = levels.get(level.lower(), logger.info)
-    log_func(message)
