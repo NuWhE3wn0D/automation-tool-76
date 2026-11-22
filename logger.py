@@ -1,34 +1,29 @@
 import logging
-from logging.handlers import RotatingFileHandler
+import sys
 from pathlib import Path
+from typing import Optional
 
-LOG_DIR = Path("logs")
-LOG_FILE = LOG_DIR / "automation.log"
-MAX_BYTES = 5 * 1024 * 1024
-BACKUP_COUNT = 3
-
-def setup_logger(name: str = "automation-tool-76") -> logging.Logger:
-    LOG_DIR.mkdir(exist_ok=True)
-    
+def setup_logger(name: str, log_file: Optional[str] = None, level: int = logging.INFO) -> logging.Logger:
     logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(level)
     
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     
-    file_handler = RotatingFileHandler(
-        LOG_FILE, 
-        maxBytes=MAX_BYTES, 
-        backup_count=BACKUP_COUNT
-    )
-    file_handler.setFormatter(formatter)
-    
-    console_handler = logging.StreamHandler()
+    console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
     
-    if not logger.handlers:
+    if log_file:
+        path = Path(log_file)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        file_handler = logging.FileHandler(path)
+        file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
-        logger.addHandler(console_handler)
         
     return logger
+
+def get_logger(name: str) -> logging.Logger:
+    return logging.getLogger(name)
+
+def log_exception(logger: logging.Logger, e: Exception) -> None:
+    logger.error(f'exception occurred: {type(e).__name__} - {str(e)}', exc_info=True)
