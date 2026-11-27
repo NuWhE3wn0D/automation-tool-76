@@ -1,24 +1,28 @@
-from typing import Optional
-
 class AutomationError(Exception):
     """Base exception for automation-tool-76."""
-    pass
 
 class ConfigurationError(AutomationError):
-    """Raised when configuration settings are invalid."""
-    def __init__(self, message: str, config_key: Optional[str] = None) -> None:
-        self.config_key = config_key
-        super().__init__(f"{message} (key: {config_key})" if config_key else message)
+    """Raised when configuration values are invalid."""
 
-class ExecutionError(AutomationError):
-    """Raised when an automation step fails execution."""
-    def __init__(self, message: str, exit_code: int = 1) -> None:
-        self.exit_code = exit_code
-        super().__init__(f"{message} (code: {exit_code})")
+class ProcessingError(AutomationError):
+    """Raised during core task execution failures."""
 
 class ValidationError(AutomationError):
     """Raised when input validation fails."""
-    def __init__(self, field: str, reason: str) -> None:
-        self.field = field
-        self.reason = reason
-        super().__init__(f"Validation failed for {field}: {reason}")
+
+class ResourceNotFoundError(AutomationError):
+    """Raised when a required resource is missing."""
+
+def handle_error(e: Exception) -> None:
+    if isinstance(e, (ConfigurationError, ValidationError)):
+        print(f"Critical setup failure: {e}")
+    elif isinstance(e, ProcessingError):
+        print(f"Task execution error: {e}")
+    else:
+        print(f"Unexpected system error: {e}")
+
+if __name__ == "__main__":
+    try:
+        raise ValidationError("Invalid configuration schema")
+    except AutomationError as err:
+        handle_error(err)
