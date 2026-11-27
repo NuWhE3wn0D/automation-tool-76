@@ -1,34 +1,23 @@
-import json
-from typing import Any, Dict, Optional
+import time
+import functools
+import logging
+from typing import Callable, Any
 
+logger = logging.getLogger(__name__)
 
-def load_json_file(path: str) -> Dict[str, Any]:
-    try:
-        with open(path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {}
-
-
-def save_json_file(path: str, data: Dict[str, Any]) -> bool:
-    try:
-        with open(path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=4)
-        return True
-    except IOError:
-        return False
-
-
-def flatten_dict(d: Dict[str, Any], parent_key: str = '', sep: str = '_') -> Dict[str, Any]:
-    items = []
-    for k, v in d.items():
-        new_key = f"{parent_key}{sep}{k}" if parent_key else k
-        if isinstance(v, dict):
-            items.extend(flatten_dict(v, new_key, sep=sep).items())
-        else:
-            items.append((new_key, v))
-    return dict(items)
-
-
-def filter_none_values(data: Dict[str, Any]) -> Dict[str, Any]:
-    return {k: v for k, v in data.items() if v is not None}
+def retry(exceptions: tuple, tries: int = 3, delay: float = 1.0, backoff: float = 2.0):
+    def decorator(func: Callable):
+        @functools.wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            current_tries, current_delay = tries, delay
+            while current_tries > 1:
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as e:
+                    logger.warning(f'{func.__name__} failed: {e}, retrying in {current_delay}s')
+                    time.sleep(current_delay)
+                    current_tries -= 1
+                    current_delay *= backoff
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
