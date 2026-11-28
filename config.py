@@ -5,13 +5,12 @@ from typing import Any, Dict
 DEFAULT_CONFIG = {
     "retries": 3,
     "timeout": 30,
-    "log_level": "INFO",
-    "enabled": True
+    "log_level": "INFO"
 }
 
 class ConfigLoader:
-    def __init__(self, config_path: str = "config.json"):
-        self.path = config_path
+    def __init__(self, path: str = "config.json"):
+        self.path = path
         self.settings = DEFAULT_CONFIG.copy()
         self._load()
 
@@ -27,6 +26,8 @@ class ConfigLoader:
     def get(self, key: str, default: Any = None) -> Any:
         return self.settings.get(key, default)
 
-    @property
-    def all(self) -> Dict[str, Any]:
-        return self.settings
+    def __getitem__(self, key: str) -> Any:
+        return self.settings[key]
+
+    def __repr__(self) -> str:
+        return f"Config(settings={self.settings})"
